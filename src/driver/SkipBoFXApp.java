@@ -1,7 +1,7 @@
 package driver;
 
 import styles.Styles;
-import components.PlayerColor;
+import users.PlayerColor;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;

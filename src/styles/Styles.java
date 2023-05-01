@@ -1,6 +1,6 @@
 package styles;
 
-import components.PlayerColor;
+import users.PlayerColor;
 
 /**
  * This sort of works as the style sheet for this project, albeit in a sort of hacky way.

@@ -5,11 +5,11 @@ import java.beans.PropertyChangeSupport;
 import java.util.EmptyStackException;
 
 import components.Card;
-import components.PlayerColor;
 import components.gameCollections.ClearedPile;
 import components.gameCollections.DrawPile;
 import components.gameCollections.FoundationPile;
 import users.Player;
+import users.PlayerColor;
 
 /**
  * SkipBo Game Model.
