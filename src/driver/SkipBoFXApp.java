@@ -2,11 +2,18 @@ package driver;
 
 import styles.Styles;
 import users.PlayerColor;
+import users.PlayerType;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ThreadLocalRandom;
 
+import javafx.animation.FadeTransition;
+import javafx.animation.ScaleTransition;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -63,6 +70,7 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	private TextField stfP1Name, stfP2Name;
 	private Button submit;
 	private ComboBox<PlayerColor> scbP1Color, scbP2Color;
+	private ComboBox<PlayerType> scbP2Type;
 	public Slider slider;
 	// Stores the ever-regenerating contents of the game tab
 	private ArrayList<Button> buttons = new ArrayList<Button>();
@@ -85,8 +93,16 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	
 	@Override
 	public void propertyChange(PropertyChangeEvent evt) {
+		if(evt.getPropertyName().matches("wait")) {
+//			System.out.println("	wait started");
+//			for(int i = 0; i < 10000000; i++) {
+//				ThreadLocalRandom.current().nextInt(0, 1000);
+//			}
+//			System.out.println("	wait stopped");
+		}
 		// Any property changes that happen will impact the state of the game, so we re-draw it.
 		drawGamePane();
+		
 	}
 
 	
@@ -139,7 +155,7 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 			// IF THE EVENT WAS THE SUBMIT BUTTON
 			if(event.getSource().equals(submit)) {
 				game.resetSkipBoGame(stfP1Name.getText(), scbP1Color.getValue(), stfP2Name.getText(), 
-						scbP2Color.getValue(), false, slider.getValue());
+						scbP2Color.getValue(), scbP2Type.getValue(), slider.getValue());
 				root.getSelectionModel().select(gameTab);
 				return;
 			}
@@ -272,6 +288,14 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 		Label slP2Color = new Label("Color: ");
 		slP2Color.setStyle(Styles.WHITE_BODY_TEXT);
 		settingsPane.getChildren().addAll(slP2Color, scbP2Color);
+		
+		// Set up the Settings Combo Box for Player 2 Agent Type
+		scbP2Type = new ComboBox<PlayerType>();
+		scbP2Type.getItems().addAll(PlayerType.values());
+		scbP2Type.setValue(PlayerType.AI);
+		Label slP2Type = new Label("Opponent Type: ");
+		slP2Type.setStyle(Styles.WHITE_BODY_TEXT);
+		settingsPane.getChildren().addAll(slP2Type, scbP2Type);
 		
 		// Put some space in between the two settings options, in a really hacky way
 		settingsPane.getChildren().add(new Label(""));

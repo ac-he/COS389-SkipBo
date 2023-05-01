@@ -2,6 +2,7 @@ package driver;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.util.ArrayList;
 import java.util.EmptyStackException;
 
 import components.Card;
@@ -9,7 +10,9 @@ import components.gameCollections.ClearedPile;
 import components.gameCollections.DrawPile;
 import components.gameCollections.FoundationPile;
 import users.Player;
+import users.PlayerAI;
 import users.PlayerColor;
+import users.PlayerType;
 
 /**
  * SkipBo Game Model.
@@ -28,7 +31,7 @@ public class SkipBoGameModel {
 	private FoundationPile[] foundationPiles;
 	
 	/*The two players of this game*/
-	private Player[] players = {new Player("-"), new Player("-")};
+	private Player[] players;
 	
 	/*To track whose turn it is*/
 	private int turn;
@@ -48,6 +51,7 @@ public class SkipBoGameModel {
 	 * Creates a new game with generic values
 	 */
 	public SkipBoGameModel() {
+		players = new Player[2];
 		resetSkipBoGame();
 	}
 	
@@ -58,14 +62,15 @@ public class SkipBoGameModel {
 	 * @param playerOneColor the Color associated with Player One
 	 * @param playerTwoName the Name of Player Two
 	 * @param playerTwoColor the Color associated with Player Two
-	 * @param playerTwo true if Player Two is human, false if Player Two is AI
+	 * @param playerTwoType the Player Type of Player Two
 	 * @param gameLength the depth of the Stock, in Cards, at the start of the game. 
 	 * More Cards makes for a longer game.
 	 */
 	public SkipBoGameModel(String playerOneName, PlayerColor playerOneColor, String playerTwoName, 
-			PlayerColor playerTwoColor, boolean playerTwoHuman, int gameLength) {
+			PlayerColor playerTwoColor, PlayerType playerTwoType, int gameLength) {
+		players = new Player[2];
 		resetSkipBoGame(playerOneName, playerOneColor, playerTwoName, playerTwoColor, 
-				playerTwoHuman, gameLength);
+				playerTwoType, gameLength);
 	}
 	
 	
@@ -75,21 +80,35 @@ public class SkipBoGameModel {
 	 * This empty method sets up the game with default settings.
 	 */
 	public void resetSkipBoGame() {
-		resetSkipBoGame("Anna", PlayerColor.CYAN, "Vivienne", PlayerColor.BLACK, false, 7);
+		resetSkipBoGame("Anna", PlayerColor.CYAN, "Vivienne", PlayerColor.BLACK, PlayerType.HUMAN, 7);
 	}
 	
 	
 	/**
 	 * Resets the game, including information about players, turn mechanics, 
 	 * 	cards, and all the involved data structures.
+	 * @param playerOneName the Name of Player One
+	 * @param playerOneColor the Color associated with Player One
+	 * @param playerTwoName the Name of Player Two
+	 * @param playerTwoColor the Color associated with Player Two
+	 * @param playerTwoType the Player Type of Player Two
+	 * @param gameLength the depth of the Stock, in Cards, at the start of the game. 
+	 * More Cards makes for a longer game.
 	 */
 	public void resetSkipBoGame(String playerOneName, PlayerColor playerOneColor, String playerTwoName, 
-			PlayerColor playerTwoColor, boolean playerTwoHuman, double gameLength) throws RuntimeException {
+			PlayerColor playerTwoColor, PlayerType playerTwoType, double gameLength) throws RuntimeException {
 		turn = 0;
 		hasWinner = false;
 		initialDrawDone = false;
 		
 		// Set up Players
+		players[0] = new Player("-");
+		if(playerTwoType.equals(PlayerType.HUMAN)) {
+			players[1] = new Player("-");
+		} else {
+			players[1] = new PlayerAI("-");
+		}
+		
 		players[0].resetPlayer(playerOneName, playerOneColor);
 		players[1].resetPlayer(playerTwoName, playerTwoColor);
 		if(players[0].getName().equals(players[1].getName())) {
@@ -325,7 +344,13 @@ public class SkipBoGameModel {
 			drawPile.shuffleIn(clearedPile.getAll());
 			clearedPile.reset();
 		}
-		pcs.firePropertyChange("", null, null);
+		
+		String fpcString = "";
+		if(currentPlayer().getPlayerType() == PlayerType.AI) {
+			System.out.println("waiting -- drawCards");
+			fpcString = "wait";
+		}
+		pcs.firePropertyChange(fpcString, null, null);
 	}
 	
 	
@@ -360,9 +385,16 @@ public class SkipBoGameModel {
 		int discardI = indexConvertUtil(discard.charAt(1), true);
 		
 		currentPlayer().discard(handI, discardI);
-		doneWithTurn();
+		
 
-		pcs.firePropertyChange("", null, null);
+		String fpcString = "";
+		if(currentPlayer().getPlayerType() == PlayerType.AI) {
+			System.out.println("waiting -- discard");
+			fpcString = "wait";
+		}
+		pcs.firePropertyChange(fpcString, null, null);
+		
+		doneWithTurn();
 	}
 	
 	
@@ -373,6 +405,16 @@ public class SkipBoGameModel {
 	private void doneWithTurn() {
 		turn++;
 		initialDrawDone = false;
+		
+		if(currentPlayer().getPlayerType() == PlayerType.AI) {
+			try {
+				currentPlayer().takeAction(this);
+				System.out.println("waiting -- doneWithTurn");
+				pcs.firePropertyChange("wait", null, null);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	
