@@ -2,7 +2,6 @@ package driver;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
-import java.util.ArrayList;
 import java.util.EmptyStackException;
 
 import components.Card;
@@ -143,7 +142,7 @@ public class SkipBoGameModel {
 		}
 		
 		// Fire property change
-		pcs.firePropertyChange("game start", null, null);
+		pcs.firePropertyChange("start", null, null);
 	}
 	
 	
@@ -183,7 +182,7 @@ public class SkipBoGameModel {
 			throw new RuntimeException(
 					"Must play from your hand, stock, or discard piles; h0-4, ss, or d1-4.");
 		}
-		pcs.firePropertyChange("", null, null);
+		pcs.firePropertyChange("play" + from + to, null, null);
 	}
 
 	
@@ -345,12 +344,7 @@ public class SkipBoGameModel {
 			clearedPile.reset();
 		}
 		
-		String fpcString = "";
-		if(currentPlayer().getPlayerType() == PlayerType.AI) {
-			System.out.println("waiting -- drawCards");
-			fpcString = "wait";
-		}
-		pcs.firePropertyChange(fpcString, null, null);
+		pcs.firePropertyChange("draw", null, null);
 	}
 	
 	
@@ -387,12 +381,7 @@ public class SkipBoGameModel {
 		currentPlayer().discard(handI, discardI);
 		
 
-		String fpcString = "";
-		if(currentPlayer().getPlayerType() == PlayerType.AI) {
-			System.out.println("waiting -- discard");
-			fpcString = "wait";
-		}
-		pcs.firePropertyChange(fpcString, null, null);
+		pcs.firePropertyChange("discard", null, null);
 		
 		doneWithTurn();
 	}
@@ -405,6 +394,8 @@ public class SkipBoGameModel {
 	private void doneWithTurn() {
 		turn++;
 		initialDrawDone = false;
+		
+		pcs.firePropertyChange("turnDone", null, null);
 		
 		if(currentPlayer().getPlayerType() == PlayerType.AI) {
 			try {
@@ -510,16 +501,21 @@ public class SkipBoGameModel {
 	 * @param index within Hand (0-4)
 	 * @returns string describing the Card there
 	 */
-	public String getHandAtIndex(boolean forCurrent, int index) {
+	public String getHandAtIndex(boolean forCurrent, char index) {
+		int i = indexConvertUtil(index, false);
 		if(forCurrent) {
 			try {
-				return currentPlayer().hand.getAt(index).getImagePath();
+				return currentPlayer().hand.getAt(i).getImagePath();
 			} catch (Exception e) {
-				return "nonexistant?";
+				return "empty";
+			}
+		} else {
+			if(players[(turn + 1)%2].hand.size() <= i) {
+				return "empty";
+			} else {
+				return "CardBack.jpg";
 			}
 		}
-		
-		return "CardBack.jpg";
 	}
 	
 	
@@ -574,9 +570,10 @@ public class SkipBoGameModel {
 	 * @param index of Foundation pile (1-4)
 	 * @returns string describing the Foundation Pile
 	 */
-	public String getFoundationTop(int index) {
+	public String getFoundationTop(char index) {
 		try {
-			return foundationPiles[index - 1].peek().getImagePath();
+			int i = indexConvertUtil(index, true);
+			return foundationPiles[i].peek().getImagePath();
 		} catch (EmptyStackException e) {
 			return "Empty.jpg";
 		}
@@ -589,14 +586,15 @@ public class SkipBoGameModel {
 	 * @param index of Discard pile (1-4)
 	 * @returns string describing the Discard Pile
 	 */
-	public String getDiscardTop(boolean forCurrent, int index) {
+	public String getDiscardTop(boolean forCurrent, char index) {
 		int fc = 0;
 		if(!forCurrent) {
 			fc++;
 		}
 		Player player = players[(turn + fc)%2];
+		int i = indexConvertUtil(index, true);
 		try {
-			return player.discardPiles[index - 1].peek().getImagePath();
+			return player.discardPiles[i].peek().getImagePath();
 		} catch (EmptyStackException e) {
 			return "Empty.jpg";
 		}
@@ -609,14 +607,15 @@ public class SkipBoGameModel {
 	 * @param index of Discard pile (1-4)
 	 * @returns string describing the number of Cards in the Discard Pile
 	 */
-	public String getDiscardCount(boolean forCurrent, int index) {
+	public String getDiscardCount(boolean forCurrent, char index) {
 		int fc = 0;
 		if(!forCurrent) {
 			fc++;
 		}
 		Player player = players[(turn + fc)%2];
-		
-		return player.discardPiles[index - 1].size() + " cards";
+
+		int i = indexConvertUtil(index, true);
+		return player.discardPiles[i].size() + " cards";
 	}
 	
 	
@@ -699,5 +698,4 @@ public class SkipBoGameModel {
 	public void removePropertyChangeListener(PropertyChangeListener listener) {
 		this.pcs.removePropertyChangeListener(listener);
 	}
-
 }
