@@ -1,10 +1,12 @@
 package users;
 
+import java.util.ArrayList;
+
 import components.Card;
-import components.PlayerColor;
 import components.playerCollections.DiscardPile;
 import components.playerCollections.Hand;
 import components.playerCollections.StockPile;
+import driver.SkipBoGameModel;
 
 /**
  * Player Object. Holds onto a few collections of Cards and helps manage them. 
@@ -53,6 +55,15 @@ public class Player {
 	 */
 	public String getName() {
 		return name;
+	}
+	
+	
+	/**
+	 * Get Type of Player
+	 * @return PlayerType of Player
+	 */
+	public PlayerType getPlayerType() {
+		return PlayerType.HUMAN;
 	}
 	
 	
@@ -199,6 +210,16 @@ public class Player {
 	 */
 	public String getStockSize() {
 		return stockPile.size() + " cards";
+	}
+
+	
+	/**
+	 * Takes an action for this player.
+	 * @return 
+	 * @throws Exception if the method is used on a Human Player
+	 */
+	public void takeAction(SkipBoGameModel skipBoGameModel) throws Exception {
+		throw new Exception("This method doesn't work with Human Players."); 
 	}
 }
 

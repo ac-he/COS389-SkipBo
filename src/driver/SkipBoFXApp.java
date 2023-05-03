@@ -1,16 +1,25 @@
 package driver;
 
 import styles.Styles;
-import components.PlayerColor;
+import users.PlayerColor;
+import users.PlayerType;
+
+import resources.Instructions;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.util.ArrayList;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -23,13 +32,13 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-import resources.Instructions;
+import javafx.util.Duration;
 
 
 /**
@@ -57,16 +66,18 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	private Tab rulesTab;
 	// The containers that live inside each of the tabs, respectively
 	private VBox settingsPane = new VBox();
-	private AnchorPane gamePane = new AnchorPane();
+	private Pane gamePane = new Pane();
 	private ScrollPane rulesPane = new ScrollPane();
 	// The elements that live inside of the settings tab
 	private TextField stfP1Name, stfP2Name;
 	private Button submit;
 	private ComboBox<PlayerColor> scbP1Color, scbP2Color;
+	private ComboBox<PlayerType> scbP2Type;
 	public Slider slider;
-	// Stores the ever-regenerating contents of the game tab
-	private ArrayList<Button> buttons = new ArrayList<Button>();
-	
+	// Stores the contents of the game tab
+	private HashMap<String, Button> gameButtons;
+	private HashMap<String, Label> gameLabels;
+
 	// GAMEPLAY VARIABLES
 	// The Skip Bo model tied to this application
 	private SkipBoGameModel game;
@@ -85,8 +96,23 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	
 	@Override
 	public void propertyChange(PropertyChangeEvent evt) {
-		// Any property changes that happen will impact the state of the game, so we re-draw it.
-		drawGamePane();
+//		ImageView view = new ImageView(new Image(imagePath + "01.jpg", 3 * ds, 4 * ds, true, true));
+//		gamePane.getChildren().add(view);
+//		System.out.println("in here");
+//		Timeline timeline = new Timeline();
+//		timeline.setCycleCount(Timeline.INDEFINITE);
+//		timeline.setAutoReverse(true);
+//		final KeyValue kv = new KeyValue(view.xProperty(), 500);
+//		final Duration dr = Duration.millis(1000);
+//		final KeyFrame kf = new KeyFrame(dr, kv);
+//		timeline.getKeyFrames().add(kf);
+//		timeline.play();
+//		
+//		
+//		String eventName = evt.getPropertyName();
+//		System.out.println("recieved property change " + eventName);
+		
+		populateGamePane();
 	}
 
 	
@@ -139,61 +165,63 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 			// IF THE EVENT WAS THE SUBMIT BUTTON
 			if(event.getSource().equals(submit)) {
 				game.resetSkipBoGame(stfP1Name.getText(), scbP1Color.getValue(), stfP2Name.getText(), 
-						scbP2Color.getValue(), false, slider.getValue());
+						scbP2Color.getValue(), scbP2Type.getValue(), slider.getValue());
 				root.getSelectionModel().select(gameTab);
 				return;
 			}
 			// OTHERWISE, IT'S ONE OF THE GAMEPLAY INPUTS
 			// All the card buttons can be looped through to find the one that sent the event
-			for(Button button : buttons) {
+			gameButtons.forEach((key, value) -> {
 				// If this was the button that sent the event...
-				if(event.getSource().equals(button)) {
-					// Get the id of the button. This will be used to figure out what action to take.
-					String id = button.getId();
-					
+				if(event.getSource().equals(value)) {
 					//If it's the draw pile
-					if(id.matches("draw")) {
+					if(key.matches("a-draw-x-b")) {
 						// Draw cards from the deck
 						game.drawCards();
 						selectedCard = "none";
 						
 					// If it's anything belonging to the opponent
-					} else if (id.matches("o.{3}")) {
+					} else if (key.matches("o.{9}")) {
 						// Send an alert because that's not a legal move.
 						throw new RuntimeException("You can't interact with your opponent's cards.");
 						
 					// If it's anything in our hand
-					} else if (id.matches("ch[0-4]c")) {
+					} else if (key.matches("c-hand-(0|1|2|3|4)-b")) {
 						// Try selecting that card.
-						selectCard(id);
+						selectCard(key);
 					
 					// If it's anything in our discard pile
-					} else if (id.matches("cd[1-4]c")) {
+					} else if (key.matches("c-disc-(1|2|3|4)-b")) {
 						// If we have a card from our hand selected
-						if(selectedCard.matches("ch[0-4]c")) {
+						if(selectedCard.matches("c-hand-(0|1|2|3|4)-b")) {
 							// Discard it there
-							game.discard(selectedCard.substring(1, 3), id.substring(1, 3));
+							game.discard("h" + selectedCard.charAt(7), "d" + key.charAt(7));
 							selectCard(selectedCard);
 						} else {
 							// Make sure it's not empty
-							if(game.discardIsEmpty(true, id.charAt(2))) {
+							if(game.discardIsEmpty(true, key.charAt(7))) {
 								throw new RuntimeException("You can't select this empty discard pile.");
 							}
 							
 							// Try selecting that card.
-							selectCard(id);
+							selectCard(key);
 						}
 						
 					// If it's our stock
-					} else if (id.matches("cssc")) {
+					} else if (key.matches("c-stoc-x-b")) {
 						// Try selecting that card
-						selectCard(id);
+						selectCard(key);
 						
 					// If it's anything in the foundations
-					} else if (id.matches("df[1-4]c")) {
+					} else if (key.matches("a-fndn-(1|2|3|4)-b")) {
 						// If we have a card from our hand selected
-						if(selectedCard.matches("c..c")) {
-							game.play(selectedCard.substring(1, 3), id.substring(1, 3));
+						if(selectedCard.matches("c-....-.-b")) {
+							if(selectedCard.matches("c-stoc-x-b")) {
+								game.play("ss", key.charAt(2) + "" + key.charAt(7));
+							} else {
+								game.play(selectedCard.charAt(2) + "" + selectedCard.charAt(7), 
+									key.charAt(2) + "" + key.charAt(7));
+							}
 							selectCard(selectedCard);
 						} else {
 							throw new RuntimeException("You have to select a card before playing "
@@ -202,13 +230,14 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 						
 					// If it's anything else, something's gone horribly wrong
 					} else {
-						throw new Exception("That input was not recognized.");
+						System.out.println("That input was not recognized. KEY=" + key );
 					}
 					
 					// No need to search the other buttons.
 					return;
 				}
-			}
+			});
+
 		} catch (RuntimeException e) { 
 			// Send the alert to the user. 
 			Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -273,6 +302,14 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 		slP2Color.setStyle(Styles.WHITE_BODY_TEXT);
 		settingsPane.getChildren().addAll(slP2Color, scbP2Color);
 		
+		// Set up the Settings Combo Box for Player 2 Agent Type
+		scbP2Type = new ComboBox<PlayerType>();
+		scbP2Type.getItems().addAll(PlayerType.values());
+		scbP2Type.setValue(PlayerType.AI);
+		Label slP2Type = new Label("Opponent Type: ");
+		slP2Type.setStyle(Styles.WHITE_BODY_TEXT);
+		settingsPane.getChildren().addAll(slP2Type, scbP2Type);
+		
 		// Put some space in between the two settings options, in a really hacky way
 		settingsPane.getChildren().add(new Label(""));
 		
@@ -298,102 +335,83 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	
 	/**
 	 * Creates everything that goes inside of the Game pane.
-	 * This includes populating the pane with values drawn from the model.
 	 */
 	private void drawGamePane() {
-		// Clear the old stuff out
-		buttons.clear();
-		gamePane.getChildren().clear();
+		gameLabels = new HashMap<String, Label>();
+		gameButtons = new HashMap<String, Button>();
+
 		
-		// "LOOSE RECTANGLES"
-		// Essentially, these are just used to create zones of related cards for organization.
-		gamePane.getChildren().addAll(generateLabel("rec2", 0.5, 0.5, 4, 7, ""),
-				generateLabel("rec2", 5.5, 0, 16, 5.5, ""),
-				generateLabel("rec2", 22.5, 0.5, 16, 7, ""),
-				generateLabel("rect", 8.5, 10.5, 4, 6, ""),
-				generateLabel("rect", 14.5, 10.5, 16, 6, ""),
-				generateLabel("rec1", 0.5, 20.5, 16, 7, ""),
-				generateLabel("rec1", 17.5, 22.5, 16, 5.5, ""),
-				generateLabel("rec1", 34.5, 20.5, 4, 7, ""));
+		gameLabels.put("o-rect-0-l", generateLabel(5.5, 0, 16, 5.5));
+		gameLabels.put("o-rect-1-l", generateLabel(22.5, 0.5, 16, 7));
+		gameLabels.put("o-rect-0-l", generateLabel(0.5, 0.5, 4, 7));
+		gameLabels.put("a-rect-0-l", generateLabel(8.5, 10.5, 4, 6));
+		gameLabels.put("a-rect-1-l", generateLabel(14.5, 10.5, 16, 6));
+		gameLabels.put("c-rect-0-l", generateLabel(17.5, 22.5, 16, 5.5));
+		gameLabels.put("c-rect-1-l", generateLabel(0.5, 20.5, 16, 7));
+		gameLabels.put("c-rect-0-l", generateLabel(34.5, 20.5, 4, 7));
 		
-		// OPPONENET CARDS
-		// Labels
-		gamePane.getChildren().add(generateLabel("ogal", 5, 6, 17, 1, 
-				game.getPlayerName(false)));
-		gamePane.getChildren().add(generateLabel("ohal", 6, 4, 15, 1, 
-				game.getHandCount(false)));
+		gameLabels.put("o-name-x-l", generateLabel( 5,  6, 17, 1));
+		gameLabels.put("o-hand-x-l", generateLabel( 6,  4, 15, 1));
+		gameLabels.put("o-stna-x-l", generateLabel( 1,  5,  3, 1));
+		gameLabels.put("o-stco-x-l", generateLabel( 1,  6,  3, 1));
+		gameLabels.put("o-disc-1-l", generateLabel(35,  5,  3, 1));
+		gameLabels.put("o-disc-2-l", generateLabel(31,  5,  3, 1));
+		gameLabels.put("o-disc-3-l", generateLabel(27,  5,  3, 1));
+		gameLabels.put("o-disc-4-l", generateLabel(23,  5,  3, 1));
+		gameLabels.put("o-disc-x-l", generateLabel(23,  6, 15, 1));
 		
-		// Stock Pile
-		gamePane.getChildren().addAll(
-				generateLabel("ossl", 1, 5, 3, 1, 
-						game.getStockCount(false)),
-				generateLabel("osll", 1, 6, 3, 1, "Stock"),
-				generateCardButton("ossc", 1, 1,
-						game.getStockTop(false)));
+		gameLabels.put("a-draw-x-l", generateLabel( 9, 15,  3, 1));
+		gameLabels.put("a-fndn-x-l", generateLabel(15, 15, 15, 1));
 		
-		// Discard Piles
-		for(int i = 1; i < 5; i++) {
-			gamePane.getChildren().addAll(
-					generateLabel("od" + i + "l", xTotal - (4 * i), 5, 3, 1, 
-							game.getDiscardCount(false, i)),
-					generateCardButton("od" + i + "c", xTotal - (4 * i), 1, 
-							game.getDiscardTop(false, i)));
-		}
-		gamePane.getChildren().add(generateLabel("odll", 23, 6, 15, 1, "Discard"));
+		gameLabels.put("c-name-x-l", generateLabel(17, 20, 17, 1));
+		gameLabels.put("c-hand-x-l", generateLabel(18, 23, 15, 1));
+		gameLabels.put("c-stna-x-l", generateLabel(35, 21,  3, 1));
+		gameLabels.put("c-stco-x-l", generateLabel(35, 22,  3, 1));
+		gameLabels.put("c-disc-1-l", generateLabel( 1, 22,  3, 1));
+		gameLabels.put("c-disc-2-l", generateLabel( 5, 22,  3, 1));
+		gameLabels.put("c-disc-3-l", generateLabel( 9, 22,  3, 1));
+		gameLabels.put("c-disc-4-l", generateLabel(13, 22,  3, 1));
+		gameLabels.put("c-disc-x-l", generateLabel( 1, 21, 15, 1));
 		
-		// Hand
-		int numCardsO = game.getHandCountAsInt(false);
-		for(int i = 0; i < numCardsO; i++) {
-			gamePane.getChildren().add(generateCardButton("oh" + i + "c", 6 + (3 * i), 0,
-			game.getHandAtIndex(false, i)));
-		}
 		
-		// SHARED CARDS
-		// Draw Pile
-		gamePane.getChildren().addAll(generateCardButton("draw", 9, 11, game.getDraw()),
-				generateLabel("drll", 9, 15, 3, 1, "Draw"),
-				generateLabel("dfll", 15, 15, 15, 1, "Foundations"));
+		gameLabels.forEach((key, value) -> {
+			gamePane.getChildren().add(value);
+		});
 		
-		// Foundation piles
-		for(int i = 1; i < 5; i++) {
-			gamePane.getChildren().addAll(
-					generateCardButton("df" + i + "c", 15 + (4 * (i - 1)), 11, 
-							game.getFoundationTop(i)));
-		}
+		gameButtons.put("o-stoc-x-b", generateCardButton( 1,  1));
+		gameButtons.put("o-disc-1-b", generateCardButton(35,  1));
+		gameButtons.put("o-disc-2-b", generateCardButton(31,  1));
+		gameButtons.put("o-disc-3-b", generateCardButton(27,  1));
+		gameButtons.put("o-disc-4-b", generateCardButton(23,  1));
+		gameButtons.put("o-hand-0-b", generateCardButton( 6,  0));
+		gameButtons.put("o-hand-1-b", generateCardButton( 9,  0));
+		gameButtons.put("o-hand-2-b", generateCardButton(12,  0));
+		gameButtons.put("o-hand-3-b", generateCardButton(15,  0));
+		gameButtons.put("o-hand-4-b", generateCardButton(18,  0));
 		
-		// CURRENT PLAYER CARDS
-		// Labels
-		gamePane.getChildren().add(generateLabel("cgal", 17, 20, 17, 1, 
-				game.getPlayerName(true)));
-		gamePane.getChildren().add(generateLabel("chal", 18, 23, 15, 1, 
-				game.getHandCount(true)));
+		gameButtons.put("a-draw-x-b", generateCardButton( 9, 11));
+		gameButtons.put("a-fndn-1-b", generateCardButton(15, 11));
+		gameButtons.put("a-fndn-2-b", generateCardButton(19, 11));
+		gameButtons.put("a-fndn-3-b", generateCardButton(23, 11));
+		gameButtons.put("a-fndn-4-b", generateCardButton(27, 11));
 		
-		// Stock
-		gamePane.getChildren().addAll(
-				generateCardButton("cssc", 35, 23, 
-						game.getStockTop(true)),
-				generateLabel("csll", 35, 21, 3, 1, "Stock"),
-				generateLabel("cssl", 35, 22, 2, 1, 
-						game.getStockCount(true)));
+		gameButtons.put("c-stoc-x-b", generateCardButton(35,  23));
+		gameButtons.put("c-disc-1-b", generateCardButton( 1,  23));
+		gameButtons.put("c-disc-2-b", generateCardButton( 5,  23));
+		gameButtons.put("c-disc-3-b", generateCardButton( 9,  23));
+		gameButtons.put("c-disc-4-b", generateCardButton(13,  23));
+		gameButtons.put("c-hand-0-b", generateCardButton(18,  24));
+		gameButtons.put("c-hand-1-b", generateCardButton(21,  24));
+		gameButtons.put("c-hand-2-b", generateCardButton(24,  24));
+		gameButtons.put("c-hand-3-b", generateCardButton(27,  24));
+		gameButtons.put("c-hand-4-b", generateCardButton(30,  24));
 		
-		// Discard Piles
-		for(int i = 1; i < 5; i++) {
-			gamePane.getChildren().addAll(
-					generateCardButton("cd" + i + "c", 1 + (4 * (i - 1)), 23, 
-							game.getDiscardTop(true, i)),
-					generateLabel("cd" + i + "l", 1 + (4 * (i - 1)), 22, 3, 1, 
-							game.getDiscardCount(true, i)));
-		}
-		gamePane.getChildren().add(generateLabel("odll", 1, 21, 15, 1, "Discard"));
+		gameButtons.forEach((key, value) -> {
+			gamePane.getChildren().add(value);
+		});
 		
-		// Hand
-		int numCardsC = game.getHandCountAsInt(true);
-		for(int i = 0; i < numCardsC; i++) {
-			gamePane.getChildren().add(generateCardButton("ch" + i + "c", 18 + (3 * i), 24,
-					game.getHandAtIndex(true, i)));
-		}
+		populateGamePane();
 	}
-	
 	
 	/**
 	 * Creates the Rules Pane, which basically just lists the game rules.
@@ -428,34 +446,14 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	 * @param value the value to display on this button. Currently set up to take in the path of the image.
 	 * @return the Button generated by these specifications.
 	 */
-	private Button generateCardButton(String id, double x, double y, String value) {
-		// Create the button
+	private Button generateCardButton(double x, double y) {
 		Button button = new Button();
-		button.setId(id);
-		
-		// Get the image associated with this card and add it to the Button
-		ImageView view = new ImageView(new Image(imagePath + value, 3 * ds, 4 * ds, true, true));
-		button.setGraphic(view);
+		button.setLayoutX(x * ds);
+		button.setLayoutY(y * ds);
+		button.setPrefSize(3 * ds, 4 * ds);
 		button.setPadding(new Insets(0));
 		button.setStyle(Styles.CARD_BASE);
-		button.setPrefSize(3 * ds, 4 * ds);
-		
-		// Style the card style specially if it has been selected
-		if(id.equals(selectedCard)) {
-			button.setStyle(Styles.SELECTED);
-		}
-		
-		// Add the card to where it lives within the anchor pane.
-		AnchorPane.setLeftAnchor(button, x * ds);
-		AnchorPane.setRightAnchor(button, (xTotal - x - 3) * ds);
-		AnchorPane.setTopAnchor(button, y * ds);
-		AnchorPane.setBottomAnchor(button, (yTotal - y - 4) * ds);
-		
-		// Set the button up to be interacted with by the Controller
 		button.setOnAction(this);
-		buttons.add(button);
-		
-		// Return the fully-formed button!
 		return button;
 	}
 	
@@ -470,33 +468,13 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	 * @param value the value to display on this Label.
 	 * @return the Label generated by these specifications.
 	 */
-	private Label generateLabel(String id, double x, double y, double w, double h, String value) {
+	private Label generateLabel(double x, double y, double w, double h) {
 		// Set up the initial Label 
-		Label label = new Label(value);
-		label.setId(id);
-		
-		// Style the Label according to its id
-		if(id.matches("ogal")) {
-			label.setStyle(Styles.getHeadingTextStyle(ds, game.getPlayerColor(false)));
-		} else if(id.matches("cgal")) {
-			label.setStyle(Styles.getHeadingTextStyle(ds, game.getPlayerColor(true)));
-		} else if (id.matches("rect")) {
-			label.setStyle(Styles.DECORATIVE_RECTANGLE);
-		} else if (id.matches("rec2")) {
-			label.setStyle(Styles.getRectangleStyle(game.getPlayerColor(false)));
-		} else if (id.matches("rec1")) {
-			label.setStyle(Styles.getRectangleStyle(game.getPlayerColor(true)));
-		} else {
-			label.setStyle(Styles.getBodyTextStyle(ds));
-		}
-		
-		// Position the Label within the anchor pane.
-		AnchorPane.setLeftAnchor(label, x * ds);
-		AnchorPane.setRightAnchor(label, (xTotal - x - w) * ds);
-		AnchorPane.setTopAnchor(label,  y * ds);
-		AnchorPane.setBottomAnchor(label, (yTotal - y - h) * ds);
-		
-		// Return the completed Label
+		Label label = new Label();
+		label.setLayoutX(x * ds);
+		label.setLayoutY(y * ds);
+		label.setPrefSize(w * ds, h * ds);
+		label.setStyle(Styles.WHITE_BODY_TEXT);
 		return label;
 	}
 
@@ -518,26 +496,136 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	
 	
 	/**
+	 * Populates the game pane with information. 
+	 * This updates every single label and button, including the ones that don't necessarily need it.
+	 */
+	public void populateGamePane() {
+		gameLabels.forEach((key, value) -> {
+			if(key.matches("(o|c)-name-x-l")) {
+				if(key.charAt(0) == 'o') {
+					value.setText(game.getPlayerName(false));
+					value.setStyle(Styles.getHeadingTextStyle(ds, game.getPlayerColor(false)));
+				} else {
+					value.setText(game.getPlayerName(true));
+					value.setStyle(Styles.getHeadingTextStyle(ds, game.getPlayerColor(true)));
+				}
+			} else if(key.matches("(o|c)-hand-x-l")) {
+				if(key.charAt(0) == 'o') {
+					value.setText(game.getHandCount(false));
+				} else {
+					value.setText(game.getHandCount(true));
+				}
+			} else if(key.matches("(o|c)-stna-x-l")) {
+				value.setText("Stock");
+			}  else if(key.matches("(o|c)-stco-x-l")) {
+				if(key.charAt(0) == 'o') {
+					value.setText(game.getStockCount(false));
+				} else {
+					value.setText(game.getStockCount(true));
+				}
+			} else if(key.matches("(o|c)-disc-(1|2|3|4)-l")) {
+				if(key.charAt(0) == 'o') {
+					value.setText(game.getDiscardCount(true, key.charAt(7)));
+				} else {
+					value.setText(game.getDiscardCount(true, key.charAt(7)));
+				}
+			} else if(key.matches("(o|c)-disc-x-l")) {
+				value.setText("Discard");
+			} else if(key.matches("a-draw-x-l")) {
+				value.setText("Draw");
+			} else if(key.matches("a-fndn-x-l")) {
+				value.setText("Foundation");
+			} else if(key.matches("(a|c|o)-rect-(0|1|2)-l")) {
+				switch(key.charAt(0)) {
+				case 'o':
+					value.setStyle(Styles.getRectangleStyle(game.getPlayerColor(false)));
+					break;
+				case 'c':
+					value.setStyle(Styles.getRectangleStyle(game.getPlayerColor(true)));
+					break;
+				default:
+					value.setStyle(Styles.DECORATIVE_RECTANGLE);
+			}
+			
+		}
+		});
+		
+		gameButtons.forEach((key, value) -> {
+			value.setVisible(true);
+			
+			if(key.matches("(o|c)-stoc-x-b")) {
+				if(key.charAt(0) == 'o') {
+					value.setGraphic(generateCardImage(game.getStockTop(false)));
+				} else {
+					value.setGraphic(generateCardImage(game.getStockTop(true)));
+				}
+			} else if(key.matches("(o|c)-disc-(1|2|3|4)-b")) {
+				if(key.charAt(0) == 'o') {
+					value.setGraphic(generateCardImage(game.getDiscardTop(false, key.charAt(7))));
+				} else {
+					value.setGraphic(generateCardImage(game.getDiscardTop(true, key.charAt(7))));
+				}
+			} else if(key.matches("(o|c)-hand-(0|1|2|3|4)-b")) {
+				String handAtIndex;
+				if(key.charAt(0) == 'o') {
+					handAtIndex = game.getHandAtIndex(false, key.charAt(7));
+				} else {
+					handAtIndex = game.getHandAtIndex(true, key.charAt(7));
+				}
+				if(handAtIndex.matches("empty")){
+					value.setVisible(false);
+				} else {
+					value.setGraphic(generateCardImage(handAtIndex));
+				}
+			} else if(key.matches("a-draw-x-b")) {
+				value.setGraphic(generateCardImage(game.getDraw()));
+			} else if(key.matches("a-fndn-(1|2|3|4)-b")) {
+				value.setGraphic(generateCardImage(game.getFoundationTop(key.charAt(7))));
+			}
+			
+			if(key.matches(selectedCard)) {
+				value.setStyle(Styles.SELECTED);
+			} else {
+				value.setStyle(Styles.CARD_BASE);
+			}
+		});
+	}
+	
+	
+	/**
+	 * This creates a picture of a Skip-Bo Card.
+	 * @param ImageName the name of the image as a string. The file path will be set up by this method
+	 * @return ImageView the Image of the Skip-Bo Card
+	 */
+	private ImageView generateCardImage(String imageName) {
+		return new ImageView(new Image(imagePath + imageName, 3 * ds, 4 * ds, true, true));
+	}
+	
+	
+	/**
 	 * Handles the selection (and deselection) of a card, by id
 	 * @param the id of the card to select or deselect
 	 */
-	private void selectCard(String id) throws RuntimeException {
-		// Deselect if already selected the same card
-		if(selectedCard.equals(id)) {
+	private void selectCard(String key) throws RuntimeException {
+	// Deselect if already selected the same card
+		if (selectedCard.matches("none")) {
+			selectedCard = key;
+			// Restyle whichever card this may be, accordingly
+			if(gameButtons.containsKey(key)) {
+				gameButtons.get(key).setStyle(Styles.SELECTED);
+			} else {
+				System.out.println("    Could not select " + key);
+			}
+		} else if(selectedCard.matches(key)) {
 			selectedCard = "none";
-		} else if (selectedCard.equals("none")) {
-			selectedCard = id;
+			if(gameButtons.containsKey(key)) {
+				gameButtons.get(key).setStyle(Styles.CARD_BASE);
+			} else {
+				System.out.println("    Could not select " + key);
+			}
 		} else {
 			throw new RuntimeException("You already have a card selected.");
 		}
-		
-		// Restyle whichever card this may be, accordingly
-		for (Button button : buttons) {
-			if(button.getId().equals(selectedCard)) {
-				button.setStyle(Styles.SELECTED);
-			} else {
-				button.setStyle(Styles.CARD_BASE);
-			}
-		}
+		System.out.println("selected key=" + key);
 	}
 }

@@ -1,6 +1,6 @@
 package styles;
 
-import components.PlayerColor;
+import users.PlayerColor;
 
 /**
  * This sort of works as the style sheet for this project, albeit in a sort of hacky way.
@@ -10,7 +10,8 @@ import components.PlayerColor;
  */
 public final class Styles {
 
-	public static final String SELECTED = "-fx-background-color: Yellow";
+	public static final String SELECTED = "-fx-background-color: Yellow; -fx-border-color: Yellow;"
+			+ "-fx-border-width: 3px;";
 	public static final String TAB = "-fx-background-color: #35775b; -fx-text-fill: White; "
 			+ "-fx-border-color: White;";
 	public static final String CARD_BASE = "-fx-background-color: #35775b";
