@@ -400,7 +400,6 @@ public class SkipBoGameModel {
 		if(currentPlayer().getPlayerType() == PlayerType.AI) {
 			try {
 				currentPlayer().takeAction(this);
-				System.out.println("waiting -- doneWithTurn");
 				pcs.firePropertyChange("wait", null, null);
 			} catch (Exception e) {
 				e.printStackTrace();

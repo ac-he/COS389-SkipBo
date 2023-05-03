@@ -28,8 +28,8 @@ public final class Styles {
 	 */
 	public static String getBodyTextStyle(double ds) {
 		return "-fx-text-fill: White;" + 
-				"-fx-font: " + Math.floor(ds/2) + "px Sans-serif; " +
-				"-fx-alignment: center;";
+				"-fx-font: " + Math.floor(ds * 3/4) + "px Sans-serif; " +
+				"-fx-alignment: Center;";
 	}
 
 	
@@ -51,7 +51,7 @@ public final class Styles {
 	 */
 	public static String getHeadingTextStyle(double ds, PlayerColor color) {
 		return "-fx-text-fill: " + color.getStyleString() + "; " + 
-				"-fx-font: " + Math.floor(ds) + "px Sans-serif; " +
-				"-fx-alignment: center;";
+				"-fx-font: " + Math.floor(ds * 3/2) + "px Sans-serif; " +
+				"-fx-alignment: Center;";
 	}
 }

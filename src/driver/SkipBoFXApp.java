@@ -9,17 +9,11 @@ import resources.Instructions;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-
-import javafx.animation.KeyFrame;
-import javafx.animation.KeyValue;
-import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
-import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -37,8 +31,8 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
-import javafx.util.Duration;
 
 
 /**
@@ -95,23 +89,7 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 
 	
 	@Override
-	public void propertyChange(PropertyChangeEvent evt) {
-//		ImageView view = new ImageView(new Image(imagePath + "01.jpg", 3 * ds, 4 * ds, true, true));
-//		gamePane.getChildren().add(view);
-//		System.out.println("in here");
-//		Timeline timeline = new Timeline();
-//		timeline.setCycleCount(Timeline.INDEFINITE);
-//		timeline.setAutoReverse(true);
-//		final KeyValue kv = new KeyValue(view.xProperty(), 500);
-//		final Duration dr = Duration.millis(1000);
-//		final KeyFrame kf = new KeyFrame(dr, kv);
-//		timeline.getKeyFrames().add(kf);
-//		timeline.play();
-//		
-//		
-//		String eventName = evt.getPropertyName();
-//		System.out.println("recieved property change " + eventName);
-		
+	public void propertyChange(PropertyChangeEvent evt) {		
 		populateGamePane();
 	}
 
@@ -343,12 +321,12 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 		
 		gameLabels.put("o-rect-0-l", generateLabel(5.5, 0, 16, 5.5));
 		gameLabels.put("o-rect-1-l", generateLabel(22.5, 0.5, 16, 7));
-		gameLabels.put("o-rect-0-l", generateLabel(0.5, 0.5, 4, 7));
+		gameLabels.put("o-rect-2-l", generateLabel(0.5, 0.5, 4, 7));
 		gameLabels.put("a-rect-0-l", generateLabel(8.5, 10.5, 4, 6));
 		gameLabels.put("a-rect-1-l", generateLabel(14.5, 10.5, 16, 6));
 		gameLabels.put("c-rect-0-l", generateLabel(17.5, 22.5, 16, 5.5));
 		gameLabels.put("c-rect-1-l", generateLabel(0.5, 20.5, 16, 7));
-		gameLabels.put("c-rect-0-l", generateLabel(34.5, 20.5, 4, 7));
+		gameLabels.put("c-rect-2-l", generateLabel(34.5, 20.5, 4, 7));
 		
 		gameLabels.put("o-name-x-l", generateLabel( 5,  6, 17, 1));
 		gameLabels.put("o-hand-x-l", generateLabel( 6,  4, 15, 1));
@@ -474,7 +452,7 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 		label.setLayoutX(x * ds);
 		label.setLayoutY(y * ds);
 		label.setPrefSize(w * ds, h * ds);
-		label.setStyle(Styles.WHITE_BODY_TEXT);
+		label.setStyle(Styles.getBodyTextStyle(ds));
 		return label;
 	}
 
@@ -525,7 +503,7 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 				}
 			} else if(key.matches("(o|c)-disc-(1|2|3|4)-l")) {
 				if(key.charAt(0) == 'o') {
-					value.setText(game.getDiscardCount(true, key.charAt(7)));
+					value.setText(game.getDiscardCount(false, key.charAt(7)));
 				} else {
 					value.setText(game.getDiscardCount(true, key.charAt(7)));
 				}
@@ -626,6 +604,5 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 		} else {
 			throw new RuntimeException("You already have a card selected.");
 		}
-		System.out.println("selected key=" + key);
 	}
 }
