@@ -332,9 +332,12 @@ public class SkipBoGameModel {
 		if (initialDrawDone &&  !currentPlayer().hand.isEmpty()) {
 			throw new RuntimeException ("Cannot draw after playing cards, unless you play all of the cards.");
 		}
+		
+		int cardsDrawn = 0;
 		Player current = players[turn%2];
 		while(current.canAddToHand()) {
 			current.addToHand(drawPile.draw());
+			cardsDrawn++;
 		}
 		if (!initialDrawDone) {
 			initialDrawDone = true;
@@ -344,7 +347,7 @@ public class SkipBoGameModel {
 			clearedPile.reset();
 		}
 		
-		pcs.firePropertyChange("draw", null, null);
+		pcs.firePropertyChange("draw" + cardsDrawn, null, null);
 	}
 	
 	
@@ -400,8 +403,7 @@ public class SkipBoGameModel {
 		if(currentPlayer().getPlayerType() == PlayerType.AI) {
 			try {
 				currentPlayer().takeAction(this);
-				System.out.println("waiting -- doneWithTurn");
-				pcs.firePropertyChange("wait", null, null);
+				pcs.firePropertyChange("player switch", null, null);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

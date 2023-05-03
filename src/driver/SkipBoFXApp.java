@@ -14,6 +14,7 @@ import java.util.HashMap;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
+import javafx.animation.SequentialTransition;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
@@ -96,23 +97,20 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	
 	@Override
 	public void propertyChange(PropertyChangeEvent evt) {
-//		ImageView view = new ImageView(new Image(imagePath + "01.jpg", 3 * ds, 4 * ds, true, true));
-//		gamePane.getChildren().add(view);
-//		System.out.println("in here");
-//		Timeline timeline = new Timeline();
-//		timeline.setCycleCount(Timeline.INDEFINITE);
-//		timeline.setAutoReverse(true);
-//		final KeyValue kv = new KeyValue(view.xProperty(), 500);
-//		final Duration dr = Duration.millis(1000);
-//		final KeyFrame kf = new KeyFrame(dr, kv);
-//		timeline.getKeyFrames().add(kf);
-//		timeline.play();
-//		
-//		
-//		String eventName = evt.getPropertyName();
-//		System.out.println("recieved property change " + eventName);
+		String eventName = evt.getPropertyName();
+		System.out.println("recieved property change: " + eventName);
 		
-		populateGamePane();
+		if(eventName.matches("draw[1-5]")) {
+			for(int i= 4; i >= 0; i--) {
+				animateMove("a-draw-x-b", "c-hand-" +i+ "-b");
+			}
+		} else if(eventName.matches("start")) {
+			populateGamePane();
+		} else if(eventName.matches("playh[0-4]f[1-4]")) {
+			System.out.println("c-hand-" + eventName.charAt(5) + "-b\nc-fndn-" + eventName.charAt(7) + "-b");
+			animateMove("c-hand-" + eventName.charAt(5) + "-b", "a-fndn-" + eventName.charAt(7) + "-b");
+		}
+		
 	}
 
 	
@@ -501,42 +499,52 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	 */
 	public void populateGamePane() {
 		gameLabels.forEach((key, value) -> {
-			if(key.matches("(o|c)-name-x-l")) {
-				if(key.charAt(0) == 'o') {
-					value.setText(game.getPlayerName(false));
-					value.setStyle(Styles.getHeadingTextStyle(ds, game.getPlayerColor(false)));
-				} else {
-					value.setText(game.getPlayerName(true));
-					value.setStyle(Styles.getHeadingTextStyle(ds, game.getPlayerColor(true)));
-				}
-			} else if(key.matches("(o|c)-hand-x-l")) {
-				if(key.charAt(0) == 'o') {
-					value.setText(game.getHandCount(false));
-				} else {
-					value.setText(game.getHandCount(true));
-				}
-			} else if(key.matches("(o|c)-stna-x-l")) {
-				value.setText("Stock");
-			}  else if(key.matches("(o|c)-stco-x-l")) {
-				if(key.charAt(0) == 'o') {
-					value.setText(game.getStockCount(false));
-				} else {
-					value.setText(game.getStockCount(true));
-				}
-			} else if(key.matches("(o|c)-disc-(1|2|3|4)-l")) {
-				if(key.charAt(0) == 'o') {
-					value.setText(game.getDiscardCount(true, key.charAt(7)));
-				} else {
-					value.setText(game.getDiscardCount(true, key.charAt(7)));
-				}
-			} else if(key.matches("(o|c)-disc-x-l")) {
-				value.setText("Discard");
-			} else if(key.matches("a-draw-x-l")) {
-				value.setText("Draw");
-			} else if(key.matches("a-fndn-x-l")) {
-				value.setText("Foundation");
-			} else if(key.matches("(a|c|o)-rect-(0|1|2)-l")) {
-				switch(key.charAt(0)) {
+			updateAtLabelKey(key);
+		});
+		gameButtons.forEach((key, value) -> {
+			updateAtButtonKey(key);
+		});
+	}
+	
+	
+	public void updateAtLabelKey(String key) {
+		Label value = gameLabels.get(key);
+		if(key.matches("(o|c)-name-x-l")) {
+			if(key.charAt(0) == 'o') {
+				value.setText(game.getPlayerName(false));
+				value.setStyle(Styles.getHeadingTextStyle(ds, game.getPlayerColor(false)));
+			} else {
+				value.setText(game.getPlayerName(true));
+				value.setStyle(Styles.getHeadingTextStyle(ds, game.getPlayerColor(true)));
+			}
+		} else if(key.matches("(o|c)-hand-x-l")) {
+			if(key.charAt(0) == 'o') {
+				value.setText(game.getHandCount(false));
+			} else {
+				value.setText(game.getHandCount(true));
+			}
+		} else if(key.matches("(o|c)-stna-x-l")) {
+			value.setText("Stock");
+		}  else if(key.matches("(o|c)-stco-x-l")) {
+			if(key.charAt(0) == 'o') {
+				value.setText(game.getStockCount(false));
+			} else {
+				value.setText(game.getStockCount(true));
+			}
+		} else if(key.matches("(o|c)-disc-(1|2|3|4)-l")) {
+			if(key.charAt(0) == 'o') {
+				value.setText(game.getDiscardCount(true, key.charAt(7)));
+			} else {
+				value.setText(game.getDiscardCount(true, key.charAt(7)));
+			}
+		} else if(key.matches("(o|c)-disc-x-l")) {
+			value.setText("Discard");
+		} else if(key.matches("a-draw-x-l")) {
+			value.setText("Draw");
+		} else if(key.matches("a-fndn-x-l")) {
+			value.setText("Foundation");
+		} else if(key.matches("(a|c|o)-rect-(0|1|2)-l")) {
+			switch(key.charAt(0)) {
 				case 'o':
 					value.setStyle(Styles.getRectangleStyle(game.getPlayerColor(false)));
 					break;
@@ -548,47 +556,111 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 			}
 			
 		}
-		});
+	}
+	
+	
+	public void updateAtButtonKey(String key) {
+		Button value = gameButtons.get(key);
 		
-		gameButtons.forEach((key, value) -> {
-			value.setVisible(true);
+		if(value == null) {
+			System.out.println("skipped key " + key);
+			return;
+		}
+		
+		value.setVisible(true);
 			
-			if(key.matches("(o|c)-stoc-x-b")) {
-				if(key.charAt(0) == 'o') {
-					value.setGraphic(generateCardImage(game.getStockTop(false)));
-				} else {
-					value.setGraphic(generateCardImage(game.getStockTop(true)));
-				}
-			} else if(key.matches("(o|c)-disc-(1|2|3|4)-b")) {
-				if(key.charAt(0) == 'o') {
-					value.setGraphic(generateCardImage(game.getDiscardTop(false, key.charAt(7))));
-				} else {
-					value.setGraphic(generateCardImage(game.getDiscardTop(true, key.charAt(7))));
-				}
-			} else if(key.matches("(o|c)-hand-(0|1|2|3|4)-b")) {
-				String handAtIndex;
-				if(key.charAt(0) == 'o') {
-					handAtIndex = game.getHandAtIndex(false, key.charAt(7));
-				} else {
-					handAtIndex = game.getHandAtIndex(true, key.charAt(7));
-				}
-				if(handAtIndex.matches("empty")){
-					value.setVisible(false);
-				} else {
-					value.setGraphic(generateCardImage(handAtIndex));
-				}
-			} else if(key.matches("a-draw-x-b")) {
-				value.setGraphic(generateCardImage(game.getDraw()));
-			} else if(key.matches("a-fndn-(1|2|3|4)-b")) {
-				value.setGraphic(generateCardImage(game.getFoundationTop(key.charAt(7))));
-			}
-			
-			if(key.matches(selectedCard)) {
-				value.setStyle(Styles.SELECTED);
+		if(key.matches("(o|c)-stoc-x-b")) {
+			if(key.charAt(0) == 'o') {
+				value.setGraphic(generateCardImage(game.getStockTop(false)));
 			} else {
-				value.setStyle(Styles.CARD_BASE);
+				value.setGraphic(generateCardImage(game.getStockTop(true)));
 			}
-		});
+		} else if(key.matches("(o|c)-disc-(1|2|3|4)-b")) {
+			if(key.charAt(0) == 'o') {
+				value.setGraphic(generateCardImage(game.getDiscardTop(false, key.charAt(7))));
+			} else {
+				value.setGraphic(generateCardImage(game.getDiscardTop(true, key.charAt(7))));
+			}
+		} else if(key.matches("(o|c)-hand-(0|1|2|3|4)-b")) {
+			String handAtIndex;
+			if(key.charAt(0) == 'o') {
+				handAtIndex = game.getHandAtIndex(false, key.charAt(7));
+			} else {
+				handAtIndex = game.getHandAtIndex(true, key.charAt(7));
+			}
+			if(handAtIndex.matches("empty")){
+				value.setVisible(false);
+			} else {
+				value.setGraphic(generateCardImage(handAtIndex));
+			}
+		} else if(key.matches("a-draw-x-b")) {
+			value.setGraphic(generateCardImage(game.getDraw()));
+		} else if(key.matches("a-fndn-(1|2|3|4)-b")) {
+			value.setGraphic(generateCardImage(game.getFoundationTop(key.charAt(7))));
+		}
+			
+		if(key.matches(selectedCard)) {
+			value.setStyle(Styles.SELECTED);
+		} else {
+			value.setStyle(Styles.CARD_BASE);
+		}
+	}
+	
+	
+	private void animateMove(String keyFrom, String keyTo) {
+		try {
+		ImageView movingCard = (ImageView) gameButtons.get(keyFrom).getGraphic();
+		
+		ImageView uncoveredCard = (ImageView) gameButtons.get(keyTo).getGraphic();
+		if(keyFrom.matches(".-hand-.-.")) {
+			uncoveredCard = null;
+		}
+		
+		movingCard.setX(gameButtons.get(keyFrom).getLayoutX());
+		movingCard.setY(gameButtons.get(keyFrom).getLayoutY());
+		if(uncoveredCard != null) {
+			uncoveredCard.setX(gameButtons.get(keyTo).getLayoutX());
+			uncoveredCard.setY(gameButtons.get(keyTo).getLayoutY());
+		}
+		
+		updateAtButtonKey(keyTo);
+		updateAtButtonKey(keyFrom);
+		gameButtons.get(keyTo).setOpacity(0);
+		
+		gamePane.getChildren().add(movingCard);
+		if(uncoveredCard != null) {
+			gamePane.getChildren().add(uncoveredCard);
+		}
+		
+		
+		Timeline uncover = new Timeline();
+		if(uncoveredCard != null) {
+			final KeyValue kvfoo = new KeyValue(uncoveredCard.opacityProperty(), 0);
+			final KeyFrame kfoo = new KeyFrame(Duration.millis(10), kvfoo);
+			uncover.getKeyFrames().addAll(kfoo);
+		}
+		
+		Timeline move = new Timeline();
+		final KeyValue kvx = new KeyValue(movingCard.xProperty(), gameButtons.get(keyTo).getLayoutX());
+		final KeyValue kvy = new KeyValue(movingCard.yProperty(), gameButtons.get(keyTo).getLayoutY());
+		final KeyFrame kf = new KeyFrame(Duration.millis(500), kvx, kvy);
+		move.getKeyFrames().addAll(kf);
+		
+		Timeline show = new Timeline();
+		final KeyValue kvfo = new KeyValue(movingCard.opacityProperty(), 0);
+		final KeyValue kvfi = new KeyValue(gameButtons.get(keyTo).opacityProperty(), 1);
+		final KeyFrame kf2 = new KeyFrame(Duration.millis(10), kvfo, kvfi);
+		
+		show.getKeyFrames().addAll(kf2);
+
+		SequentialTransition sequence = new SequentialTransition(move, show, uncover);
+		sequence.play();
+		
+		// In case anything was missed
+		populateGamePane();
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
 	
@@ -613,19 +685,14 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 			// Restyle whichever card this may be, accordingly
 			if(gameButtons.containsKey(key)) {
 				gameButtons.get(key).setStyle(Styles.SELECTED);
-			} else {
-				System.out.println("    Could not select " + key);
 			}
 		} else if(selectedCard.matches(key)) {
 			selectedCard = "none";
 			if(gameButtons.containsKey(key)) {
 				gameButtons.get(key).setStyle(Styles.CARD_BASE);
-			} else {
-				System.out.println("    Could not select " + key);
 			}
 		} else {
 			throw new RuntimeException("You already have a card selected.");
 		}
-		System.out.println("selected key=" + key);
 	}
 }
