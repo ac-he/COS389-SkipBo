@@ -3,6 +3,7 @@ package driver;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.EmptyStackException;
+import java.util.concurrent.ThreadLocalRandom;
 
 import components.Card;
 import components.gameCollections.ClearedPile;
@@ -22,7 +23,7 @@ public class SkipBoGameModel {
 	
 	/*The "Deck" -- This is where cards are drawn from.*/
 	private DrawPile drawPile;
-	
+
 	/*This is essentially the garbage pile. When the Foundations are cleared, cards go here.*/
 	private ClearedPile clearedPile;
 	
@@ -43,6 +44,8 @@ public class SkipBoGameModel {
 	
 	/** Helper object for observer patterns */
 	protected PropertyChangeSupport pcs = new PropertyChangeSupport(this);
+	
+	private int id;
 
 	
 	/**
@@ -53,6 +56,41 @@ public class SkipBoGameModel {
 		players = new Player[2];
 		resetSkipBoGame();
 	}
+	
+	
+	/**
+	 * Copy Constructor
+	 * Copies all the data out of an old game into a new one
+	 * @param oldGame the SkipBoGameModel to copy.
+	 */
+	public SkipBoGameModel(SkipBoGameModel oldGame) {	
+		// Misc variables
+		turn = oldGame.getTurn();
+		hasWinner = oldGame.isHasWinner();
+		initialDrawDone = oldGame.isInitialDrawDone();
+		id = ThreadLocalRandom.current().nextInt(0,10000);
+		
+		// Draw Pile
+		drawPile = new DrawPile(oldGame.getDrawPile());
+		// Cleared Pile
+		clearedPile = new ClearedPile(oldGame.getClearedPile());
+		// Foundation Pile
+		foundationPiles = new FoundationPile[4];
+		for(int i = 0; i < 4; i++) {
+			foundationPiles[i] = new FoundationPile(oldGame.getFoundationPiles()[i]);
+		}
+		
+		// Players
+		players = new Player[2];
+		for(int i = 0; i < 2; i++) {
+			if(oldGame.getPlayer(i).getPlayerType() == PlayerType.AI) {
+				players[i] = new PlayerAI(oldGame.getPlayer(i));
+			} else {
+				players[i] = new Player(oldGame.getPlayer(i));
+			}
+		}
+	}
+	
 	
 	
 	/**
@@ -99,6 +137,7 @@ public class SkipBoGameModel {
 		turn = 0;
 		hasWinner = false;
 		initialDrawDone = false;
+		id = ThreadLocalRandom.current().nextInt(0,10000);
 		
 		// Set up Players
 		players[0] = new Player("-");
@@ -328,13 +367,16 @@ public class SkipBoGameModel {
 	 * Draws up to a full Hand of Cards for the current player from the DrawPile
 	 * @throws Exception if this is not a valid time for the player to draw Cards
 	 */
-	public void drawCards() throws RuntimeException {
+	public int drawCards() throws RuntimeException {
 		if (initialDrawDone &&  !currentPlayer().hand.isEmpty()) {
 			throw new RuntimeException ("Cannot draw after playing cards, unless you play all of the cards.");
 		}
 		Player current = players[turn%2];
+		
+		int cardsDrawn = 0;
 		while(current.canAddToHand()) {
 			current.addToHand(drawPile.draw());
+			cardsDrawn++;
 		}
 		if (!initialDrawDone) {
 			initialDrawDone = true;
@@ -345,6 +387,7 @@ public class SkipBoGameModel {
 		}
 		
 		pcs.firePropertyChange("draw", null, null);
+		return cardsDrawn;
 	}
 	
 	
@@ -380,10 +423,9 @@ public class SkipBoGameModel {
 		
 		currentPlayer().discard(handI, discardI);
 		
-
 		pcs.firePropertyChange("discard", null, null);
-		
 		doneWithTurn();
+		
 	}
 	
 	
@@ -394,17 +436,14 @@ public class SkipBoGameModel {
 	private void doneWithTurn() {
 		turn++;
 		initialDrawDone = false;
-		
-		pcs.firePropertyChange("turnDone", null, null);
-		
 		if(currentPlayer().getPlayerType() == PlayerType.AI) {
-			try {
-				currentPlayer().takeAction(this);
-				pcs.firePropertyChange("wait", null, null);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+			pcs.firePropertyChange("newAITurn", null, null);
 		}
+		pcs.firePropertyChange("newTurn", null, null);
+	}
+	
+	public SkipBoGameModel takeTurn() throws Exception {
+		return currentPlayer().takeTurn(this);
 	}
 	
 	
@@ -421,7 +460,7 @@ public class SkipBoGameModel {
 	 * Gets the current Player, whose turn it is
 	 * @return the current Player
 	 */
-	private Player currentPlayer() {
+	public Player currentPlayer() {
 		return players[turn%2];
 	}
 	
@@ -500,20 +539,18 @@ public class SkipBoGameModel {
 	 * @param index within Hand (0-4)
 	 * @returns string describing the Card there
 	 */
-	public String getHandAtIndex(boolean forCurrent, char index) {
-		int i = indexConvertUtil(index, false);
-		if(forCurrent) {
-			try {
-				return currentPlayer().hand.getAt(i).getImagePath();
-			} catch (Exception e) {
-				return "empty";
-			}
-		} else {
-			if(players[(turn + 1)%2].hand.size() <= i) {
-				return "empty";
-			} else {
-				return "CardBack.jpg";
-			}
+	public Card getHandAtIndex(boolean forCurrent, char index) {
+		int i = indexConvertUtil(index, false);		
+		int fc = 0;
+		if(!forCurrent) {
+			fc++;
+		}
+		Player player = players[(turn + fc)%2];
+		
+		try {
+			return player.hand.getAt(i);
+		} catch (Exception e) {
+			return null;
 		}
 	}
 	
@@ -523,7 +560,7 @@ public class SkipBoGameModel {
 	 * @param forCurrent true if for the current Player, false if for the opponent Player
 	 * @returns top Card of the Stock
 	 */
-	public String getStockTop(boolean forCurrent) {
+	public Card getStockTop(boolean forCurrent) {
 		int fc = 0;
 		if(!forCurrent) {
 			fc++;
@@ -531,9 +568,9 @@ public class SkipBoGameModel {
 		Player player = players[(turn + fc)%2];
 		
 		try {
-			return player.peekStock().getImagePath();
+			return player.peekStock();
 		} catch (Exception e) {
-			return "Empty.jpg";
+			return null;
 		}
 	}
 	
@@ -556,25 +593,16 @@ public class SkipBoGameModel {
 	
 	
 	/**
-	 * Gets the text to display on the Draw Pile
-	 * @returns text to display on the Draw pile
-	 */
-	public String getDraw() {
-		return "CardBack.jpg";
-	}
-	
-	
-	/**
 	 * Gets the top Card of a particular Foundation Pile as a string
 	 * @param index of Foundation pile (1-4)
 	 * @returns string describing the Foundation Pile
 	 */
-	public String getFoundationTop(char index) {
+	public Card getFoundationTop(char index) {
 		try {
 			int i = indexConvertUtil(index, true);
-			return foundationPiles[i].peek().getImagePath();
+			return foundationPiles[i].peek();
 		} catch (EmptyStackException e) {
-			return "Empty.jpg";
+			return null;
 		}
 	}
 	
@@ -585,7 +613,7 @@ public class SkipBoGameModel {
 	 * @param index of Discard pile (1-4)
 	 * @returns string describing the Discard Pile
 	 */
-	public String getDiscardTop(boolean forCurrent, char index) {
+	public Card getDiscardTop(boolean forCurrent, char index) {
 		int fc = 0;
 		if(!forCurrent) {
 			fc++;
@@ -593,9 +621,9 @@ public class SkipBoGameModel {
 		Player player = players[(turn + fc)%2];
 		int i = indexConvertUtil(index, true);
 		try {
-			return player.discardPiles[i].peek().getImagePath();
+			return player.discardPiles[i].peek();
 		} catch (EmptyStackException e) {
-			return "Empty.jpg";
+			return null;
 		}
 	}
 	
@@ -638,32 +666,113 @@ public class SkipBoGameModel {
 	
 	
 	/**
+	 * Get the DrawPile
+	 * @return the drawPile
+	 */
+	public DrawPile getDrawPile() {
+		return drawPile;
+	}
+
+
+	/**
+	 * Get the ClearedPile
+	 * @return the clearedPile
+	 */
+	public ClearedPile getClearedPile() {
+		return clearedPile;
+	}
+
+
+	/**
+	 * Get the FoundationPiles
+	 * @return the foundationPiles
+	 */
+	public FoundationPile[] getFoundationPiles() {
+		return foundationPiles;
+	}
+
+
+	/**
+	 * @return the players
+	 */
+	public Player getPlayer(int index) {
+		return players[index];
+	}
+
+
+	/**
+	 * Get the turn as an integer
+	 * @return the turn
+	 */
+	public int getTurn() {
+		return turn;
+	}
+
+
+	/**
+	 * Get the value of initialDrawDone
+	 * @return the initialDrawDone
+	 */
+	public boolean isInitialDrawDone() {
+		return initialDrawDone;
+	}
+
+
+	/**
+	 * Get the value of hasWinner
+	 * @return the hasWinner
+	 */
+	public boolean isHasWinner() {
+		return hasWinner;
+	}
+	
+	
+	/**
 	 * Utility function to convert indices specified as characters to integers
 	 * @param c Char to convert to integer
 	 * @param shiftByOne True if the index system starts at 1 (for the Foundation and Discard Piles)
 	 * @return int corresponding to the specified character
 	 */
 	private int indexConvertUtil(char c, boolean shiftByOne) {
-		int shift = 0;
 		if (shiftByOne) {
-			shift--;
+			return c - 49;
 		}
-		switch(c) {
-			case '0':
-				return 0 + shift;
-			case '1':
-				return 1 + shift;
-			case '2':
-				return 2 + shift;
-			case '3':
-				return 3 + shift;
-			case '4':
-			default:
-				return 4 + shift;
-		}
+		return c - 48;
 	}
 	
 	
+	/**
+	 * Checks if two SkipBoGameModels represent equivalent game states.
+	 * @param other The other SkipBoGameModel to compare with this one.
+	 * @return if the games are equivalent
+	 */
+	public boolean equals(SkipBoGameModel other) {
+		if(drawPile.size() != other.getDrawPile().size()) {
+			return false;
+		}
+		if (clearedPile.size() != other.getClearedPile().size()) {
+			return false;
+		}
+		for(int f = 0; f < 4; f++) {
+			if(!foundationPiles[f].isEmpty() && !other.getFoundationPiles()[f].isEmpty()) {
+				if(foundationPiles[f].peek() != other.getFoundationPiles()[f].peek()) {
+					return false;
+			
+				}
+			} else if (!(foundationPiles[f].isEmpty() && other.getFoundationPiles()[f].isEmpty())) {
+				return false;
+			}
+		}
+		if(!players[0].equals(other.getPlayer(0))) {
+			return false;
+		}
+		if(!players[1].equals(other.getPlayer(1))) {
+			return false;
+		}
+		return true;
+	}
+
+
 	@Override
 	public String toString() {
 		if (hasWinner) {
@@ -672,6 +781,7 @@ public class SkipBoGameModel {
 					"\nType \"new\" to play again or \"quit\" to exit the program.";
 		}
 		return "----------------------------------------------------------------" +
+				"\nID: " + id +  
 				drawPile.toString() + foundationPiles[0].toString() + foundationPiles[1].toString() +
 				foundationPiles[2].toString() + foundationPiles[3].toString() + 
 				"\nCurrent Player: " + players[turn%2].getName() + players[turn%2].toString() + 

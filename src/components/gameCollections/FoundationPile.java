@@ -25,6 +25,17 @@ public class FoundationPile {
 
 	
 	/**
+	 * Copy Constructor
+	 * @param oldFoundationPile the FoundationPile to copy.
+	 */
+	@SuppressWarnings("unchecked") // Stacks don't have copy constructors RIP
+	public FoundationPile(FoundationPile oldFoundationPile) {
+		id = oldFoundationPile.getId();
+		foundationPile = (Stack<Card>) oldFoundationPile.getFoundationPile().clone();
+	}
+
+
+	/**
 	 * Checks if the FoundationPile is empty.
 	 * @return True if empty
 	 */
@@ -53,6 +64,7 @@ public class FoundationPile {
 		return foundationPile.peek();
 	}
 	
+	
 	/**
 	 * Pushes a Card onto the FoundationPile. 
 	 * @param card The Card to Add
@@ -61,16 +73,34 @@ public class FoundationPile {
 		foundationPile.push(card);
 	}
 	
+	
 	@Override
 	public String toString() {
 		return "\nFoundation " + id + ": " + peekString();
 	}
 
+	
 	/**
 	 * Removes the top card off of the FoundationPile.
 	 * @return The top card of the FoundationPile. 
 	 */
 	public Card pop() {
 		return foundationPile.pop();
+	}
+
+
+	/**
+	 * @return the foundationPile
+	 */
+	public Stack<Card> getFoundationPile() {
+		return foundationPile;
+	}
+
+
+	/**
+	 * @return the id
+	 */
+	public String getId() {
+		return id;
 	}
 }

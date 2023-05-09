@@ -24,6 +24,17 @@ public class DiscardPile {
 	
 	
 	/**
+	 * Copy constructor
+	 * @param oldDiscardPile the DiscardPile to copy
+	 */
+	@SuppressWarnings("unchecked")
+	public DiscardPile(DiscardPile oldDiscardPile) {
+		id = oldDiscardPile.getId();
+		discardPile = (Stack<Card>) oldDiscardPile.getDiscardPile().clone();
+	}
+
+
+	/**
 	 * Peeks at the top Card of the Discard Pile but does not remove it.
 	 * @return Card from the top of this DiscardPile. 
 	 */
@@ -96,5 +107,25 @@ public class DiscardPile {
 	public int size() {
 		return discardPile.size();
 	}
+
+
+	/**
+	 * Gets the whole discard pile.
+	 * @return the discardPile
+	 */
+	public Stack<Card> getDiscardPile() {
+		return discardPile;
+	}
+
+
+	/**
+	 * Gets the ID of this discard pile.
+	 * @return the id
+	 */
+	public String getId() {
+		return id;
+	}
+	
+	
 
 }

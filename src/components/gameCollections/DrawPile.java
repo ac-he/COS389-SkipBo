@@ -13,7 +13,7 @@ public class DrawPile {
 
 	private ArrayList<Card> drawPile;
 
-	
+
 	/**
 	 * Constructor
 	 */
@@ -22,6 +22,15 @@ public class DrawPile {
 	}
 
 	
+	/**
+	 * Copy Constructor
+	 * @param oldDrawPile the DrawPile to copy
+	 */
+	public DrawPile(DrawPile oldDrawPile) {
+		drawPile = new ArrayList<Card>(oldDrawPile.getDrawPile());
+	}
+
+
 	/**
 	 * Resets the draw pile by clearing it and re-adding the right number of cards.
 	 * It also handles shuffling. 
@@ -88,4 +97,23 @@ public class DrawPile {
 	public boolean gettingLow() {
 		return drawPile.size() <= 5;
 	}
+	
+	
+	/**
+	 * Gets this draw pile. 
+	 * @return the drawPile
+	 */
+	public ArrayList<Card> getDrawPile() {
+		return drawPile;
+	}
+
+	
+	/**
+	 * Gets the size of this DrawPile
+	 * @return the size of this DrawPile in cards
+	 */
+	public int size() {
+		return drawPile.size();
+	}
+
 }

@@ -23,6 +23,15 @@ public class ClearedPile {
 
 	
 	/**
+	 * Copy Constructor
+	 * @param oldClearedPile the ClearedPile to copy
+	 */
+	public ClearedPile(ClearedPile oldClearedPile) {
+		clearedPile = oldClearedPile.getAll();
+	}
+
+
+	/**
 	 * Resets the ClearedPile.
 	 */
 	public void reset() {
@@ -53,6 +62,15 @@ public class ClearedPile {
 	 */
 	public ArrayList<Card> getAll() {
 		return clearedPile;
+	}
+
+
+	/**
+	 * Gets the size of the clearedPile
+	 * @return the size of this clearedPile
+	 */
+	public int size() {
+		return clearedPile.size();
 	}
 
 }

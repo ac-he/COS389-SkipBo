@@ -1,7 +1,5 @@
 package users;
 
-import java.util.ArrayList;
-
 import components.Card;
 import components.playerCollections.DiscardPile;
 import components.playerCollections.Hand;
@@ -21,7 +19,7 @@ public class Player {
 	private PlayerColor color;
 	
 	/*Contains all the cards this player is trying to get rid of*/
-	private StockPile stockPile;
+	public StockPile stockPile;
 	
 	/*Contains this player's reserve cards*/
 	public DiscardPile[] discardPiles;
@@ -49,6 +47,24 @@ public class Player {
 	}
 	
 	
+	/**
+	 * Copy Constructor
+	 */
+	public Player(Player oldPlayer) {
+		name = oldPlayer.getName();
+		color = oldPlayer.getColor();
+		stockPile = new StockPile(oldPlayer.stockPile);
+		
+		discardPiles = new DiscardPile[4];
+		for(int i = 0; i < 4; i++) {
+			discardPiles[i] = new DiscardPile(oldPlayer.discardPiles[i]);
+		}
+		
+		hand = new Hand(oldPlayer.hand);
+		
+	}
+
+
 	/**
 	 * Get Name of Player
 	 * @return name of Player
@@ -78,6 +94,9 @@ public class Player {
 	
 	/**
 	 * Resets the Player's Hand, StockPile, and DiscardPile
+	 * @param name the name of this player
+	 * @param color the color associated with this player
+	 * @throws RuntimeException if the name is too long
 	 */
 	public void resetPlayer(String name, PlayerColor color) throws RuntimeException {
 		this.color = color;
@@ -214,11 +233,45 @@ public class Player {
 
 	
 	/**
+	 * Checks if two players are equivalent
+	 * @param other the Player to compare to this one
+	 * @return whether or not the two players are equivalent
+	 */
+	public boolean equals(Player other) {
+		if(other.peekStock() != this.peekStock()) {
+			return false;
+		} 
+		if (!other.getStockSize().equals(this.getStockSize())) {
+			return false;
+		}
+		for(int h = 0; h < 5; h++) {
+			if(hand.hasElementAt(h) && other.hand.hasElementAt(h)) {
+				if(hand.getAt(h) != other.hand.getAt(h)) {
+					return false;
+				}
+			}
+			if(!(!hand.hasElementAt(h)) && (!other.hand.hasElementAt(h))) {
+				return false;
+			}
+		}
+		for(int d = 0; d < d; d++) {
+			if(discardPiles[d].size() != other.discardPiles[d].size()) {
+				return false;
+			}
+			if(discardPiles[d].peek() != other.discardPiles[d].peek()) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	
+	/**
 	 * Takes an action for this player.
-	 * @return 
+	 * @return the resulting game state
 	 * @throws Exception if the method is used on a Human Player
 	 */
-	public void takeAction(SkipBoGameModel skipBoGameModel) throws Exception {
+	public SkipBoGameModel takeTurn(SkipBoGameModel skipBoGameModel) throws Exception {
 		throw new Exception("This method doesn't work with Human Players."); 
 	}
 }

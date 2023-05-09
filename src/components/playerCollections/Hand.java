@@ -22,6 +22,15 @@ public class Hand {
 	
 	
 	/**
+	 * Copy Constructor
+	 * @param oldHand the Hand to copy
+	 */
+	public Hand(Hand oldHand) {
+		hand = new ArrayList<Card>(oldHand.getHand());
+	}
+
+
+	/**
 	 * Adds a card to the hand
 	 * @param Card to add
 	 */
@@ -141,4 +150,15 @@ public class Hand {
 		
 		return handRetString;
 	}
+
+
+	/**
+	 * Gets the whole hand.
+	 * @return the hand
+	 */
+	public ArrayList<Card> getHand() {
+		return hand;
+	}
+	
+	
 }

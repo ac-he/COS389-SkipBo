@@ -21,6 +21,16 @@ public class StockPile {
 	}
 	
 	
+	/**
+	 * Copy Constructor
+	 * @param oldStockPile the StockPile to clone
+	 */
+	@SuppressWarnings("unchecked") // Tragically stacks do not have a copy constructor
+	public StockPile(StockPile oldStockPile) {
+		stockPile = (Stack<Card>)oldStockPile.getStockPile().clone();
+	}
+
+
 	/** 
 	 * Checks if the Stock is empty.
 	 * @return true if Stock is empty, otherwise false
@@ -82,4 +92,15 @@ public class StockPile {
 	public int size() {
 		return stockPile.size();
 	}
+
+
+	/**
+	 * Gets the StockPile
+	 * @return the stockPile
+	 */
+	public Stack<Card> getStockPile() {
+		return stockPile;
+	}
+	
+	
 }

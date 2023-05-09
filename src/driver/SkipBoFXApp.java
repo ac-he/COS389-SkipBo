@@ -8,8 +8,9 @@ import resources.Instructions;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-
 import java.util.HashMap;
+
+import components.Card;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -31,7 +32,6 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
-import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 
 
@@ -49,7 +49,7 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	private final double ds = 25; // Display scalar
 	private final double xTotal = 39; // Total X-dimension in ds
 	private final double yTotal = 28; // Total Y-dimension in ds
-	private final String imagePath = ""; // In case Java lets me move the assets into a different folder.
+	private final String imagePath = "/"; // In case Java lets me move the assets into a different folder.
 	
 	// DISPLAY ELEMENTS
 	// The root element, a tab pane
@@ -89,8 +89,27 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 
 	
 	@Override
-	public void propertyChange(PropertyChangeEvent evt) {		
+	public void propertyChange(PropertyChangeEvent evt) {	
 		populateGamePane();
+		
+		if(evt.getPropertyName().equals("newTurn") && game.hasWinner()) {
+			Alert alert = new Alert(Alert.AlertType.INFORMATION);
+			alert.setTitle("Winner!");
+			alert.setContentText("The game is over. " + game.currentPlayer().getName() + " has won!");
+			alert.showAndWait();
+			selectCard(selectedCard);
+			root.getSelectionModel().select(settingsTab);
+		}
+		
+		if(evt.getPropertyName().equals("newAITurn")) {
+			try {
+				game = new SkipBoGameModel(game.takeTurn());
+				game.addPropertyChangeListener(this);
+				populateGamePane();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	
@@ -533,32 +552,32 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 			
 			if(key.matches("(o|c)-stoc-x-b")) {
 				if(key.charAt(0) == 'o') {
-					value.setGraphic(generateCardImage(game.getStockTop(false)));
+					value.setGraphic(generateCardImage(game.getStockTop(false), key));
 				} else {
-					value.setGraphic(generateCardImage(game.getStockTop(true)));
+					value.setGraphic(generateCardImage(game.getStockTop(true), key));
 				}
 			} else if(key.matches("(o|c)-disc-(1|2|3|4)-b")) {
 				if(key.charAt(0) == 'o') {
-					value.setGraphic(generateCardImage(game.getDiscardTop(false, key.charAt(7))));
+					value.setGraphic(generateCardImage(game.getDiscardTop(false, key.charAt(7)), key));
 				} else {
-					value.setGraphic(generateCardImage(game.getDiscardTop(true, key.charAt(7))));
+					value.setGraphic(generateCardImage(game.getDiscardTop(true, key.charAt(7)), key));
 				}
 			} else if(key.matches("(o|c)-hand-(0|1|2|3|4)-b")) {
-				String handAtIndex;
+				Card handAtIndex;
 				if(key.charAt(0) == 'o') {
 					handAtIndex = game.getHandAtIndex(false, key.charAt(7));
 				} else {
 					handAtIndex = game.getHandAtIndex(true, key.charAt(7));
 				}
-				if(handAtIndex.matches("empty")){
+				if(handAtIndex == null){
 					value.setVisible(false);
 				} else {
-					value.setGraphic(generateCardImage(handAtIndex));
+					value.setGraphic(generateCardImage(handAtIndex, key));
 				}
 			} else if(key.matches("a-draw-x-b")) {
-				value.setGraphic(generateCardImage(game.getDraw()));
+				value.setGraphic(generateCardImage(null, key));
 			} else if(key.matches("a-fndn-(1|2|3|4)-b")) {
-				value.setGraphic(generateCardImage(game.getFoundationTop(key.charAt(7))));
+				value.setGraphic(generateCardImage(game.getFoundationTop(key.charAt(7)), key));
 			}
 			
 			if(key.matches(selectedCard)) {
@@ -575,8 +594,17 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	 * @param ImageName the name of the image as a string. The file path will be set up by this method
 	 * @return ImageView the Image of the Skip-Bo Card
 	 */
-	private ImageView generateCardImage(String imageName) {
-		return new ImageView(new Image(imagePath + imageName, 3 * ds, 4 * ds, true, true));
+	private ImageView generateCardImage(Card card, String key) {
+		String imgString = "Empty.jpg";
+		if(card == null) {
+			if(key.matches("(a-draw-x-b)|(o-hand-.-b)")) {
+				imgString = "CardBack.jpg";
+			}
+		} else {
+			imgString = card.getImagePath();
+		}
+		return new ImageView(new Image(SkipBoFXApp.class.getResourceAsStream(imagePath + imgString), 
+				3 * ds, 4 * ds, true, true));
 	}
 	
 	
