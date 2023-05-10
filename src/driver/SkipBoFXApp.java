@@ -92,17 +92,25 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	public void propertyChange(PropertyChangeEvent evt) {	
 		populateGamePane();
 		
-		if(evt.getPropertyName().equals("newTurn") && game.hasWinner()) {
+		if(evt.getPropertyName().equals("newTurn") && game.hasWinner() ||
+				evt.getPropertyName().equals("gameOver")) {
 			Alert alert = new Alert(Alert.AlertType.INFORMATION);
 			alert.setTitle("Winner!");
-			alert.setContentText("The game is over. " + game.currentPlayer().getName() + " has won!");
+			alert.setContentText("Game over: " + game.currentPlayer().getName() + " has won!");
 			alert.showAndWait();
-			selectCard(selectedCard);
+			alert.setHeight(10 * ds);
+			alert.setWidth(10 * ds);
 			root.getSelectionModel().select(settingsTab);
 		}
 		
 		if(evt.getPropertyName().equals("newAITurn")) {
 			try {
+				Alert alert = new Alert(Alert.AlertType.INFORMATION);
+				alert.setTitle("AI Turn");
+				alert.setContentText("The AI Player is taking its turn now.");
+				alert.showAndWait();
+				alert.setHeight(10 * ds);
+				alert.setWidth(10 * ds);
 				game = new SkipBoGameModel(game.takeTurn());
 				game.addPropertyChangeListener(this);
 				populateGamePane();
@@ -241,6 +249,8 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 			alert.setTitle("User Error!");
 			alert.setContentText(e.getMessage());
 			alert.showAndWait();
+			alert.setHeight(6 * ds);
+			alert.setWidth(6 * ds);
 			selectCard(selectedCard);
 			
 			// Switch away from the game tab if the game has been won.

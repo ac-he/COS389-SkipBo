@@ -193,7 +193,8 @@ public class SkipBoGameModel {
 	 */
 	public void play(String from, String to) throws RuntimeException {
 		if(hasWinner()) {
-			throw new RuntimeException("Game has been won already!");
+			pcs.firePropertyChange("gameOver", null, null);
+			return;
 		}
 		
 		// Checks if the "to" destination is valid
@@ -358,7 +359,8 @@ public class SkipBoGameModel {
 		// If the Stock is empty, the game has been won!
 		if (currentPlayer().stockEmpty()) {
 			hasWinner = true;
-			throw new RuntimeException("The Game is over. " + currentPlayer().getName() + " has won!");
+			pcs.firePropertyChange("gameOver", null, null);
+			return;
 		}
 	}
 	
@@ -368,6 +370,11 @@ public class SkipBoGameModel {
 	 * @throws Exception if this is not a valid time for the player to draw Cards
 	 */
 	public int drawCards() throws RuntimeException {
+		if(hasWinner()) {
+			pcs.firePropertyChange("gameOver", null, null);
+			return 0;
+		}
+		
 		if (initialDrawDone &&  !currentPlayer().hand.isEmpty()) {
 			throw new RuntimeException ("Cannot draw after playing cards, unless you play all of the cards.");
 		}
@@ -411,7 +418,8 @@ public class SkipBoGameModel {
 	 */
 	public void discard(String hand, String discard) throws RuntimeException {
 		if(hasWinner()) {
-			throw new RuntimeException("Game has been won!");
+			pcs.firePropertyChange("gameOver", null, null);
+			return;
 		}
 		
 		if(!initialDrawDone) {

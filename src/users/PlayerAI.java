@@ -10,7 +10,7 @@ import driver.SkipBoGameModel;
 public class PlayerAI extends Player {
 	
 	private ArrayList<String> turnLog;
-	private final int logLevel = 1; 
+	private final int logLevel = 0; 
 	// 0 ----- need to know. user-level stuff. big actions.
 	// 1 ----- important but non-essential
 	// 2 ----- "the junk messages" if debugging needs to happen
@@ -56,6 +56,11 @@ public class PlayerAI extends Player {
 		
 		boolean haltConditionNotMet = true;
 		while(haltConditionNotMet) {
+			// Zeroth, check if the stock is empty
+			if(workingGame.getStockTop(true) == null) {
+				return workingGame;
+			}
+			
 			// First, try to draw cards.
 			try {
 				int c = workingGame.drawCards();	
@@ -247,9 +252,7 @@ public class PlayerAI extends Player {
 			GameStateNode curNode = queue.remove();
 			SkipBoGameModel curGame = curNode.getGame();
 			log("--------------------------------------------------", 2);
-			log("--------------------------------------------------", 2);
 			log("Removing new node from queue. New Length: " + queue.size(), 1);
-			log("--------------------------------------------------", 2);
 			log("--------------------------------------------------", 2);
 			log(curGame.toString(), 2);
 			for(char cur : tryAt) {
