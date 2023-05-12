@@ -2,6 +2,8 @@ package driver;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EmptyStackException;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -252,7 +254,7 @@ public class SkipBoGameModel {
 		
 		// Finds the value of the specified Card in the Hand
 		if (!currentPlayer().hand.hasElementAt(handIndex)) {
-			throw new RuntimeException ("Cannot pick up a card from an empty discard pile.");
+			throw new RuntimeException ("Cannot select a card that doesn't exist.");
 		} else if (currentPlayer().hand.isSkipBo(handIndex)) {
 			handValue = foundationValue + 1;
 			handIsSkipBo = true;
@@ -450,6 +452,9 @@ public class SkipBoGameModel {
 		pcs.firePropertyChange("newTurn", null, null);
 	}
 	
+	
+	/**
+	 */
 	public SkipBoGameModel takeTurn() throws Exception {
 		return currentPlayer().takeTurn(this);
 	}
@@ -472,6 +477,14 @@ public class SkipBoGameModel {
 		return players[turn%2];
 	}
 	
+	
+	/**
+	 * Gets the ID of this game
+	 * @return id
+	 */
+	public int getId() {
+		return id;
+	}
 	
 	/**
 	 * Gets the name of a particular Player
@@ -734,6 +747,26 @@ public class SkipBoGameModel {
 		return hasWinner;
 	}
 	
+
+	/** Finds the value of a card anywhere within the game
+	 * @param forCurrent true if for the current Player, false if for the opponent Player
+	 * @param cardString specifies the location of the card (ss, d1-4, h0-4, f1-4)
+	 * @throws Exception if the input was invalid
+	 */
+	public Card getCardAt(boolean forCurrent, String cardString) throws Exception {
+		if(cardString.matches("ss")) {
+			return getStockTop(forCurrent);
+		} else if (cardString.matches("d[1-4]")) {
+			return getDiscardTop(forCurrent, cardString.charAt(1));
+		} else if (cardString.matches("f[1-4]")) {
+			return getFoundationTop(cardString.charAt(1));
+		} else if (cardString.matches("h[0-4]")) {
+			return getHandAtIndex(forCurrent, cardString.charAt(1));
+		}
+		
+		throw new Exception("invalid input.");
+	}
+	
 	
 	/**
 	 * Utility function to convert indices specified as characters to integers
@@ -761,16 +794,27 @@ public class SkipBoGameModel {
 		if (clearedPile.size() != other.getClearedPile().size()) {
 			return false;
 		}
+
+		Integer[] thisTops = new Integer[4];
+		Integer[] otherTops = new Integer[4];
 		for(int f = 0; f < 4; f++) {
-			if(!foundationPiles[f].isEmpty() && !other.getFoundationPiles()[f].isEmpty()) {
-				if(foundationPiles[f].peek() != other.getFoundationPiles()[f].peek()) {
-					return false;
-			
-				}
-			} else if (!(foundationPiles[f].isEmpty() && other.getFoundationPiles()[f].isEmpty())) {
-				return false;
-			}
+			if(foundationPiles[f].isEmpty()) {
+				thisTops[f] = 0;
+			} else {
+				thisTops[f] = foundationPiles[f].peek().getValue();
+			}	
+			if(other.getFoundationPiles()[f].isEmpty()) {
+				otherTops[f] = 0;
+			} else {
+				otherTops[f] = other.getFoundationPiles()[f].peek().getValue();
+			}	
 		}
+		Arrays.sort(thisTops);
+		Arrays.sort(otherTops);
+		if(!thisTops.equals(otherTops)) {
+			return false;
+		}
+		
 		if(!players[0].equals(other.getPlayer(0))) {
 			return false;
 		}
@@ -814,5 +858,31 @@ public class SkipBoGameModel {
 	 */
 	public void removePropertyChangeListener(PropertyChangeListener listener) {
 		this.pcs.removePropertyChangeListener(listener);
+	}
+
+
+	public ArrayList<String> getLogContents() {	
+		ArrayList<String> retLog = new ArrayList<String>();
+		if(currentPlayer().getPlayerType() == PlayerType.HUMAN) { // It's player 1's turn. Player 1 always human
+			if(players[1].getPlayerType() == PlayerType.HUMAN) {
+				retLog.add("Turn log not available for human v. human games.");
+				return retLog;
+			} else if (players[1].getPlayerType() == PlayerType.AI) {
+				try {
+					if(players[(turn + 1) % 2].getMostRecentLogs() == null || 
+							players[(turn + 1) % 2].getMostRecentLogs().size() == 0) {
+						retLog = new ArrayList<String>();
+						retLog.add("AI Player has not taken a turn yet.");
+					} else {
+						retLog = new ArrayList<String>(players[(turn + 1) % 2].getMostRecentLogs());
+					}
+					return retLog;
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		retLog.add("");
+		return retLog;
 	}
 }

@@ -1,5 +1,7 @@
 package users;
 
+import java.util.ArrayList;
+
 import components.Card;
 import components.playerCollections.DiscardPile;
 import components.playerCollections.Hand;
@@ -272,6 +274,16 @@ public class Player {
 	 * @throws Exception if the method is used on a Human Player
 	 */
 	public SkipBoGameModel takeTurn(SkipBoGameModel skipBoGameModel) throws Exception {
+		throw new Exception("This method doesn't work with Human Players."); 
+	}
+	
+	
+	/**
+	 * Gets the most recent turn log. It clears it and returns a copy.
+	 * @return ArrayList<String> describing all the turn actions for this AI player
+	 * @throws Exception if the method is used on a Human Player
+	 */
+	public ArrayList<String> getMostRecentLogs() throws Exception {
 		throw new Exception("This method doesn't work with Human Players."); 
 	}
 }

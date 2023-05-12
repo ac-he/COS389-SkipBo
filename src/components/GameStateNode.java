@@ -1,24 +1,29 @@
 package components;
 
+import java.util.ArrayList;
+
 import driver.SkipBoGameModel;
 
 /**
- * Stores a GameStateModel and an associated value, for use in priority queues
+ * Stores a GameStateModel, how it was reached, and an associated value, for use in priority queues
  * @author Anna Heebsh
  */
 public class GameStateNode implements Comparable<GameStateNode> {
 
 	private int value;
 	private SkipBoGameModel game;
+	private ArrayList<String> stepsTaken;
 	
 	/**
 	 * Constructor
 	 * @param value integer value for this node.
-	 * @param SkipBoGameModel game associated with this node.
+	 * @param game associated with this node.
+	 * @param stepsTaken to reach this game state node.
 	 */
-	public GameStateNode(int value, SkipBoGameModel game) {
+	public GameStateNode(int value, SkipBoGameModel game, ArrayList<String> stepsTaken) {
 		this.value = value;
 		this.game = game;
+		this.stepsTaken = stepsTaken;
 	}
 
 	
@@ -43,6 +48,15 @@ public class GameStateNode implements Comparable<GameStateNode> {
 	 */
 	public SkipBoGameModel getGame() {
 		return game;
+	}
+	
+	
+	/**
+	 * Get the steps taken to reach this game state
+	 * @return the steps taken to get to this game state
+	 */
+	public ArrayList<String> getStepsTaken() {
+		return stepsTaken;
 	}
 
 }

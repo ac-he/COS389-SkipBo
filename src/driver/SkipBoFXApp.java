@@ -8,6 +8,7 @@ import resources.Instructions;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import components.Card;
@@ -47,7 +48,7 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	// Essentially, I designed the view so that it is divided up into units of size ds (Display Scalar)
 	// The position of every element is given in this unit.
 	private final double ds = 25; // Display scalar
-	private final double xTotal = 39; // Total X-dimension in ds
+	private final double xTotal = 56; // Total X-dimension in ds
 	private final double yTotal = 28; // Total Y-dimension in ds
 	private final String imagePath = "/"; // In case Java lets me move the assets into a different folder.
 	
@@ -71,6 +72,8 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	// Stores the contents of the game tab
 	private HashMap<String, Button> gameButtons;
 	private HashMap<String, Label> gameLabels;
+	private ScrollPane turnLogSidebar = new ScrollPane();
+	private VBox innerTurnLogSidebar = new VBox();
 
 	// GAMEPLAY VARIABLES
 	// The Skip Bo model tied to this application
@@ -98,8 +101,6 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 			alert.setTitle("Winner!");
 			alert.setContentText("Game over: " + game.currentPlayer().getName() + " has won!");
 			alert.showAndWait();
-			alert.setHeight(10 * ds);
-			alert.setWidth(10 * ds);
 			root.getSelectionModel().select(settingsTab);
 		}
 		
@@ -109,9 +110,7 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 				alert.setTitle("AI Turn");
 				alert.setContentText("The AI Player is taking its turn now.");
 				alert.showAndWait();
-				alert.setHeight(10 * ds);
-				alert.setWidth(10 * ds);
-				game = new SkipBoGameModel(game.takeTurn());
+				game = game.takeTurn();
 				game.addPropertyChangeListener(this);
 				populateGamePane();
 			} catch (Exception e) {
@@ -249,8 +248,6 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 			alert.setTitle("User Error!");
 			alert.setContentText(e.getMessage());
 			alert.showAndWait();
-			alert.setHeight(6 * ds);
-			alert.setWidth(6 * ds);
 			selectCard(selectedCard);
 			
 			// Switch away from the game tab if the game has been won.
@@ -346,7 +343,6 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	private void drawGamePane() {
 		gameLabels = new HashMap<String, Label>();
 		gameButtons = new HashMap<String, Button>();
-
 		
 		gameLabels.put("o-rect-0-l", generateLabel(5.5, 0, 16, 5.5));
 		gameLabels.put("o-rect-1-l", generateLabel(22.5, 0.5, 16, 7));
@@ -416,6 +412,14 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 		gameButtons.forEach((key, value) -> {
 			gamePane.getChildren().add(value);
 		});
+		
+		turnLogSidebar = new ScrollPane();
+		turnLogSidebar.setLayoutX(39 * ds);
+		turnLogSidebar.setLayoutY(0 * ds);
+		turnLogSidebar.setPrefHeight(28 * ds);
+		turnLogSidebar.setPrefWidth(17 * ds);
+		turnLogSidebar.setContent(innerTurnLogSidebar);
+		gamePane.getChildren().add(turnLogSidebar);
 		
 		populateGamePane();
 	}
@@ -507,6 +511,23 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	 * This updates every single label and button, including the ones that don't necessarily need it.
 	 */
 	public void populateGamePane() {
+		ArrayList<String> log = game.getLogContents();
+		innerTurnLogSidebar.getChildren().clear();
+		
+		Text text = new Text("Turn Log");
+		text.setWrappingWidth(ds * 16);
+		text.setFont(new Font(ds * 1.2));
+		text.setFill(Color.web("#073763"));
+		innerTurnLogSidebar.getChildren().add(text);
+		
+		for(String s : log) {
+			text = new Text("-- " + s);
+			text.setWrappingWidth(ds * 16);
+			text.setFont(new Font(ds * 0.75));
+			text.setFill(Color.web("#073763"));
+			innerTurnLogSidebar.getChildren().add(text);
+		}
+		
 		gameLabels.forEach((key, value) -> {
 			if(key.matches("(o|c)-name-x-l")) {
 				if(key.charAt(0) == 'o') {

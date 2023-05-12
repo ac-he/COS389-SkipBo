@@ -2,6 +2,7 @@ package users;
 
 import java.util.ArrayList;
 import java.util.PriorityQueue;
+import java.util.Scanner;
 
 import components.Card;
 import components.GameStateNode;
@@ -19,6 +20,7 @@ public class PlayerAI extends Player {
 	private final String[] playTo = {"f1", "f2", "f3", "f4"};
 	
 	private Boolean lastStockAttemptWorked;
+	private Boolean lastOutOfHandAttemptWorked;
 	
 	/**
 	 * Constructor
@@ -26,6 +28,7 @@ public class PlayerAI extends Player {
 	 */
 	public PlayerAI(String name) {
 		super(name);
+		turnLog = new ArrayList<String>();
 	}
 
 	/**
@@ -35,13 +38,25 @@ public class PlayerAI extends Player {
 	 */
 	public PlayerAI(String name, PlayerColor color) {
 		super(name, color);
+		turnLog = new ArrayList<String>();
 	}
 	
 	
+	/**
+	 * Copy constructor
+	 * @param player to copy
+	 */
 	public PlayerAI(Player player) {
 		super(player);
+		try {
+			turnLog = player.getMostRecentLogs();
+		} catch (Exception e) {
+			// Tried to copy a non-AI player.
+			e.printStackTrace();
+		}
 	}
 
+	
 	@Override
 	public PlayerType getPlayerType() {
 		 return PlayerType.AI;
@@ -65,21 +80,35 @@ public class PlayerAI extends Player {
 			try {
 				int c = workingGame.drawCards();	
 				waitForConfirmation();
-				log(c + " cards drawn", 0);
+				log(c + " cards drawn.", 0);
 				continue;
 			} catch (RuntimeException e){
 				waitForConfirmation();
 				log("(Cannot draw cards now)", 1);
 			}
-			SkipBoGameModel stockResult = playStockIfPossible(workingGame);
+			
+			// Second, try playing out of the stock.
+			SkipBoGameModel stockResult = breadthFirstSearch(workingGame, "stock");
 			if(lastStockAttemptWorked) {
 				workingGame = new SkipBoGameModel(stockResult);
 				waitForConfirmation();
-				log("Was able to play from stock.", 0);
+				log("A " + workingGame.getStockTop(true) + " was uncovered on the Stock Pile.", 0);
 				continue;
 			} else {
 				waitForConfirmation();
 				log("Was not able to play from the stock.", 1);
+			}
+			
+//			// Then, try to completely use up the cards in the hand.
+//			SkipBoGameModel outOfHandResult = playOutOfHandIfPossible(workingGame);
+			if(lastOutOfHandAttemptWorked) {
+//				workingGame = new SkipBoGameModel(outOfHandResult);
+				waitForConfirmation();
+				log("Was able to play from hand.", 0);
+				continue;
+			} else {
+				waitForConfirmation();
+				log("Was not able to play all cards from the hand.", 1);
 			}
 			
 			haltConditionNotMet = false;
@@ -93,16 +122,18 @@ public class PlayerAI extends Player {
 		String pile = discardInfo.substring(2);
 		
 		log("Discarded " + workingGame.currentPlayer().hand.getAt(hand.charAt(1) - 48).name() 
-				+ " from " + hand +" to " + pile, 0);
+				+ " from " + hand +" to " + pile + ".", 0);
 		workingGame.discard(hand, pile);
 	
 		log("after discarding, the game I am giving back expects it to be " + 
 				workingGame.currentPlayer().getName() + "'s turn. ", 2);
-		
+
 		return workingGame;
 	}
+
 	
-	
+	/**
+	 */
 	private String decideOnDiscard(SkipBoGameModel game) {
 		ArrayList<Card> hand = game.currentPlayer().hand.getHand();
 		
@@ -187,7 +218,7 @@ public class PlayerAI extends Player {
 			int highestIndex = 0;
 			for (Card h : hand) {
 				if(h != Card.SKIPBO_UNPLAYED) {
-					if(hand.get(highestIndex).getValue() < h.getValue()) {
+					if(hand.get(highestIndex) != null && hand.get(highestIndex).getValue() < h.getValue()) {
 						highestIndex = i;
 					}
 				}
@@ -235,73 +266,179 @@ public class PlayerAI extends Player {
 	
 	
 	/**
-	 * Plays from the stock if possible
+	 * Uses a BFQ to accomplish a goal
 	 * @param game state to work off of
+	 * @param the goal or type of this search ["stock", "hand0", "block", "extra"]
 	 * @return the resulting game state
 	 */
-	private SkipBoGameModel playStockIfPossible(SkipBoGameModel game) {
+	private SkipBoGameModel breadthFirstSearch(SkipBoGameModel game, String type) {
+		if(!type.matches("^(stock)|(hand0)|(block)|(extra)$")) {
+			return game;
+		}
+		
 		SkipBoGameModel testGame = new SkipBoGameModel(game);
 		char[] tryAt = {'1', '2', '3', '4'};
 		
 		ArrayList<SkipBoGameModel> seenBefore = new ArrayList<SkipBoGameModel>();
+		ArrayList<String> steps = new ArrayList<String>();
+		//steps.add("This node originated from the first node.");
 		
 		PriorityQueue<GameStateNode> queue = new PriorityQueue<GameStateNode>();
-		queue.add(new GameStateNode(evaluateScore(testGame), testGame));
+		queue.add(new GameStateNode(evaluateScoreOnStock(testGame), testGame, steps));
 		
 		while(!queue.isEmpty()) {
 			GameStateNode curNode = queue.remove();
 			SkipBoGameModel curGame = curNode.getGame();
-			log("--------------------------------------------------", 2);
-			log("Removing new node from queue. New Length: " + queue.size(), 1);
-			log("--------------------------------------------------", 2);
+			log("\n\n", 1);
+			log("Removing new node from " + type + " queue. New Length: " + queue.size(), 1);
 			log(curGame.toString(), 2);
-			for(char cur : tryAt) {
-				log("looking at nodes", 1);
-				waitForConfirmation();
-				try {
-					log("TRYING TO PLAY STOCK: ss to f" + cur, 1);
-					curGame.play("ss", "f" + cur);
-					log("MOVE ACCPTED.", 1);
-					waitForConfirmation();
-					lastStockAttemptWorked = true;
-					return curGame;
-				} catch (Exception e){
-					log("Could not play stock on " + cur + ": " + e, 2);
-					log("MOVE REJECTED.", 1);
-					waitForConfirmation();
-				}
+			for(String step : curNode.getStepsTaken()) {
+				log(step, 2);
 			}
+			
+			if(type.matches("stock")) {
+				for(char cur : tryAt) {
+					log("looking at nodes", 1);
+					waitForConfirmation();
+					
+					try {
+						log("TRYING TO PLAY STOCK: ss to f" + cur, 1);
+						
+						Card stockTop = curGame.getStockTop(true);
+						curGame.play("ss", "f" + cur);
+						lastStockAttemptWorked = true;
+						
+						log("\nabout to start popping nodes", 1);
+						
+						while(!curNode.getStepsTaken().isEmpty()) {
+							String step = curNode.getStepsTaken().remove(curNode.getStepsTaken().size() - 1);
+							if(!step.isBlank()) {
+								log(step, 0);
+							}
+						}
+						
+						String skipBo = "";
+						if(stockTop == Card.SKIPBO_UNPLAYED) {
+							skipBo = "The Skip-Bo became a " + curGame.getFoundationTop(cur) + ".";
+						}
+	
+						log("Played " + stockTop + " from stock to f" + cur + ". " + skipBo, 0);
+						log("MOVE ACCPTED.", 1);
+						waitForConfirmation();
+						
+						return curGame;
+						
+					} catch (Exception e){
+						log("Could not play stock on " + cur + ": " + e, 2);
+						log("MOVE REJECTED.", 1);
+						waitForConfirmation();
+					}
+				}
+			} else if(type.matches("hand0")) {
+				
+			} else if(type.matches("block")) {
+				
+			} else if(type.matches("extra")) {
+				
+			}
+			
 			log("ABOUT TO START LOOPING THROUGH ALL POSSIBLE PLAYS", 1);
 			waitForConfirmation();
+			
 			for(String from : playFrom) {
 				for(String to : playTo) {
-					waitForConfirmation();;
-					log("Checking new node: Playing from " + from + " to " + to, 1);
-					try {
+					
+					waitForConfirmation();
+					log("Checking new node: from " + from + " to " + to, 1);	
+					log("Move sequence for parent node (" + curGame.getId() + "): ", 2);
+					for(String move : curNode.getStepsTaken()) {
+						log(move, 2);
+					}
+					
+					
+					try { 
 						SkipBoGameModel newGame = new SkipBoGameModel(curGame);
+						
+						Card fromCard = newGame.getCardAt(true, from);
 						newGame.play(from, to);
-						log("Heading into Seen Before loop. " + seenBefore.size(), 2);
+						
+						log("Heading into Seen Before loop. " + seenBefore.size(), 3);
+						
+						boolean skip = false;
 						for(SkipBoGameModel model : seenBefore) {
-							waitForConfirmation();
-							log("checking if seen before", 1);
-							log("result of check: " + model.equals(newGame), 2);
+							//waitForConfirmation();
+							log("checking if seen before", 3);
+							log("result of check: " + model.equals(newGame), 3);
+							
 							if(model.equals(newGame)) {
-								waitForConfirmation();
-								log("not including previously seen node", 1);
+								//waitForConfirmation();
+								log("not including previously seen node", 3);
+								
+								skip = true;
 								break;
 							}
-							log("including never-before-seen node. Queue is now " + seenBefore.size() + 
-									" items long.", 1);
 						}
-						queue.add(new GameStateNode(evaluateScore(newGame), newGame));
+						
+						if(skip) {
+							continue;
+						}
+						
 						seenBefore.add(newGame);
+						log("including never-before-seen node. Queue is now " + seenBefore.size() + 
+								" items long.", 1);
+						
+						ArrayList<String> addMoveSequence = new ArrayList<String>();
+						ArrayList<String> stepsToCopy = new ArrayList<String>();
+						stepsToCopy.addAll(curNode.getStepsTaken());
+						
+						while(!curNode.getStepsTaken().isEmpty()) {
+							String step = stepsToCopy.remove(stepsToCopy.size() - 1);
+							if(!step.isBlank()) {
+								addMoveSequence.add(step);
+							}
+						}
+						
+						String fromString = from;
+						if(from.matches("h[0-4]")) {
+							fromString = "hand";
+						}
+						String skipBo = "";
+						if(fromCard == Card.SKIPBO_UNPLAYED) {
+							if(newGame.getFoundationTop(to.charAt(1)) == null) {
+								skipBo = " That stack is now empty.";
+							} else {
+								skipBo = " The Skip-Bo became a " + newGame.getFoundationTop(to.charAt(1)) + ".";
+							}
+						}
+						addMoveSequence.add("Played " + fromCard + " from " + fromString + " to " + to 
+								+ ". " + skipBo);
+						
+						int score = 0;
+						switch(type) {
+							case "stock":
+								score = evaluateScoreOnStock(newGame);
+								break;
+							case "hand0":
+								score = evaluateScoreOnHand(newGame);
+								break;
+							case "block":
+							case "extra":
+								score = 0;
+								break;
+						};
+						
+						queue.add(new GameStateNode(score, newGame, addMoveSequence));
+						
 						waitForConfirmation();
-						log(newGame.toString(), 1);
-						log("Adding Children to Stock Queue: Could play " + from + " to " + to, 2);
+						log("Adding Children to Queue: Could play " + from + " to " + to, 2);
+						log("Move sequence for this node ("+ newGame.getId() +"): ", 2);
+						for(String move : addMoveSequence) {
+							log(move, 2);
+						}
 					} catch (Exception e) {
 						waitForConfirmation();
-						log("Adding Children to Stock Queue: Could not play " + from + " to " + to +
-								": " + e.getMessage() , 2);
+						log("Adding Children to Queue: Could not play " + from + " to " + to +
+								": " + e.getMessage() , 3);
 						if(e.getMessage() == null) {
 							e.printStackTrace();
 						}
@@ -310,7 +447,16 @@ public class PlayerAI extends Player {
 			}
 		}
 		
-		lastStockAttemptWorked = false;
+		if(type.matches("stock")) {
+			lastStockAttemptWorked = false;
+		} else if (type.matches("hand0")) {
+			lastOutOfHandAttemptWorked = false;
+		} else if(type.matches("block")) {
+			
+		} else if (type.matches("extra")) {
+			
+		}
+		
 		return testGame;
 	}
 	
@@ -321,7 +467,7 @@ public class PlayerAI extends Player {
 	 * @param testGame the game to score
 	 * @return the score of this game
 	 */
-	private int evaluateScore(SkipBoGameModel testGame) {
+	private int evaluateScoreOnStock(SkipBoGameModel testGame) {
 		char[] tryAt = {'1', '2', '3', '4'};
 		int currentLowest = 6;
 		Integer stockTop = testGame.getStockTop(true).getValue();
@@ -346,6 +492,17 @@ public class PlayerAI extends Player {
 	
 	
 	/**
+	 * Evaluates the worth of a particular game by comparing the number of cards that have been played.
+	 * Fewer cards is better.
+	 * @param testGame the game to score
+	 * @return the score of this game
+	 */
+	private int evaluateScoreOnHand(SkipBoGameModel testGame) {
+		return testGame.getHandCountAsInt(true);
+	}
+	
+	
+	/**
 	 * Logs a message for this game
 	 * 0: need to know. user-level stuff. big actions.
 	 * 1: important but non-essential
@@ -355,17 +512,29 @@ public class PlayerAI extends Player {
 	 */
 	private void log(String message, int level) {
 		if(level <= logLevel) {
-			System.out.println(message);
+			// System.out.println(message);
 			turnLog.add(message);
 		}
+	}
+	
+	
+	/**
+	 * Gets the most recent turn log. It clears it and returns a copy.
+	 * @return ArrayList<String> describing all the turn actions for this AI player
+	 */
+	public ArrayList<String> getMostRecentLogs() {
+		return turnLog;
 	}
 
 	
 	/**
 	 * Debugging utility. Uncomment the lines and this will allow for slow traversal of the logs.
 	 */
+	@SuppressWarnings("unused") // This won't be called unless I am actively trying to debug and have set the log level to 2
 	private void waitForConfirmation() {
-//		Scanner scanner = new Scanner(System.in);
-//		String latestInput = scanner.nextLine();
+		if(2 <= logLevel) {
+			Scanner scanner = new Scanner(System.in);
+			String latestInput = scanner.nextLine();
+		}
 	}
 }
