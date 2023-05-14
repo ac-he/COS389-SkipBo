@@ -651,14 +651,14 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 			if(gameButtons.containsKey(key)) {
 				gameButtons.get(key).setStyle(Styles.SELECTED);
 			} else {
-				System.out.println("    Could not select " + key);
+				//System.out.println("    Could not select " + key);
 			}
 		} else if(selectedCard.matches(key)) {
 			selectedCard = "none";
 			if(gameButtons.containsKey(key)) {
 				gameButtons.get(key).setStyle(Styles.CARD_BASE);
 			} else {
-				System.out.println("    Could not select " + key);
+				//System.out.println("    Could not select " + key);
 			}
 		} else {
 			throw new RuntimeException("You already have a card selected.");

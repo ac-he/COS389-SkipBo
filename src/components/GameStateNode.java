@@ -29,7 +29,7 @@ public class GameStateNode implements Comparable<GameStateNode> {
 	
 	@Override
 	public int compareTo(GameStateNode other) {
-		return Math.abs(other.value - value);
+		return value - other.value;
 	}
 	
 	

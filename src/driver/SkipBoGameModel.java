@@ -811,8 +811,10 @@ public class SkipBoGameModel {
 		}
 		Arrays.sort(thisTops);
 		Arrays.sort(otherTops);
-		if(!thisTops.equals(otherTops)) {
-			return false;
+		for(int i = 0; i < 4; i++) {
+			if(thisTops[i] != otherTops[i]) {
+				return false;
+			}
 		}
 		
 		if(!players[0].equals(other.getPlayer(0))) {
@@ -866,7 +868,6 @@ public class SkipBoGameModel {
 		if(currentPlayer().getPlayerType() == PlayerType.HUMAN) { // It's player 1's turn. Player 1 always human
 			if(players[1].getPlayerType() == PlayerType.HUMAN) {
 				retLog.add("Turn log not available for human v. human games.");
-				return retLog;
 			} else if (players[1].getPlayerType() == PlayerType.AI) {
 				try {
 					if(players[(turn + 1) % 2].getMostRecentLogs() == null || 
@@ -876,13 +877,19 @@ public class SkipBoGameModel {
 					} else {
 						retLog = new ArrayList<String>(players[(turn + 1) % 2].getMostRecentLogs());
 					}
-					return retLog;
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
+		} else if (hasWinner){
+			try {
+				retLog = currentPlayer().getMostRecentLogs();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		} else {
+			retLog.add("");
 		}
-		retLog.add("");
 		return retLog;
 	}
 }
