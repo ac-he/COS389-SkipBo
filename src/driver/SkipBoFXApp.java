@@ -153,6 +153,7 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 			root.getTabs().addAll(settingsTab, rulesTab, gameTab);
 			
 			// Create and show the primary stage
+			primaryStage.getIcons().add(new Image(SkipBoFXApp.class.getResourceAsStream(imagePath + "Logo.jpg")));
 			primaryStage.setTitle("Skip-Bo");
 			primaryStage.setScene(scene);
 			primaryStage.setResizable(false);
@@ -628,12 +629,21 @@ public class SkipBoFXApp extends Application implements PropertyChangeListener, 
 	private ImageView generateCardImage(Card card, String key) {
 		String imgString = "Empty.jpg";
 		if(card == null) {
-			if(key.matches("(a-draw-x-b)|(o-hand-.-b)")) {
+			if(key.matches("a-draw-x-b")) {
 				imgString = "CardBack.jpg";
 			}
 		} else {
-			imgString = card.getImagePath();
+			if (key.matches(".-hand-.-b")) {
+				if(key.charAt(0) == 'c' && game.currentPlayer().getPlayerType() == PlayerType.HUMAN) {
+					imgString = card.getImagePath();
+				} else {
+					imgString = "CardBack.jpg";
+				}
+			} else {
+				imgString = card.getImagePath();
+			}
 		}
+		
 		return new ImageView(new Image(SkipBoFXApp.class.getResourceAsStream(imagePath + imgString), 
 				3 * ds, 4 * ds, true, true));
 	}

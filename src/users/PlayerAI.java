@@ -85,7 +85,7 @@ public class PlayerAI extends Player {
 				int c = workingGame.drawCards();	
 				waitForConfirmation();
 				log(c + " cards drawn.", 0);
-				log(workingGame.currentPlayer().hand.toString(), 0);
+				log(workingGame.currentPlayer().hand.toString(), 1);
 				continue;
 			} catch (RuntimeException e){
 				waitForConfirmation();
